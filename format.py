@@ -1,6 +1,6 @@
 import sys
 
-text0 = open(sys.argv[1], encoding='UTF-8').read()  # 'E:\myfiles\总结梳理\语文病句.txt'
+text0 = open(sys.argv[1], encoding='UTF-8').read()  # sys.argv[1]'E:\myfiles\总结梳理\语文病句.txt'
 text1 = text0.split('\n')
 
 indention = []
@@ -73,6 +73,6 @@ for i in range(0, len(space)):
     sstr += pstr + text1[i] + '\n'
     pstr = ''
 
-with open(sys.argv[1][:-4] + '&' + sys.argv[1][-4:], 'w', encoding = 'UTF-8') as file:
+with open(sys.argv[1][:-4] + '&' + '.txt', 'w', encoding = 'UTF-8') as file:
     file.write(sstr)
     file.close()
