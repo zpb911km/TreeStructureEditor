@@ -6,24 +6,9 @@ text1 = text0.split('\n')
 indention = []
 style = []
 space = []
-if text1[1][0] == '\t':
-    for t in range(0, len(text1)):
-        for i in range(0, 20):
-            if text1[t][0:i] == '\t'*i and text1[t][i] != '\t' and text1[t][0] == '\t':
-                indention.append(i)
-                # 0:'├─' , 1:'└─', 2:''
-                style.append(0)
-                text1[t] = text1[t][i:]
-                space.append(['    ']*i)
-                break
-            elif text1[t][0] != '\t':  # the first level can not indent
-                indention.append(0)
-                # 0:'├─' , 1:'└─' , 2:''
-                style.append(2)
-                space.append('')
-                break
 
-elif text1[1][0] == ' ':
+
+if text1[1][0:4] == '    ':
     for t in range(0, len(text1)):
         for i in range(0, 20):
             if text1[t][0:4*i] == '    '*i and text1[t][4*i] != ' ' and text1[t][0] == ' ':
@@ -34,6 +19,22 @@ elif text1[1][0] == ' ':
                 space.append(['    ']*i)
                 break
             elif text1[t][0] != ' ':  # the first level can not indent
+                indention.append(0)
+                # 0:'├─' , 1:'└─' , 2:''
+                style.append(2)
+                space.append('')
+                break
+else:
+    for t in range(0, len(text1)):
+        for i in range(0, 20):
+            if text1[t][0:i] == text1[t][0]*i and text1[t][i] != text1[t][0] and text1[t][0] == text1[t][0]:
+                indention.append(i)
+                # 0:'├─' , 1:'└─', 2:''
+                style.append(0)
+                text1[t] = text1[t][i:]
+                space.append(['    ']*i)
+                break
+            elif t == 0:  # the first level can not indent
                 indention.append(0)
                 # 0:'├─' , 1:'└─' , 2:''
                 style.append(2)
