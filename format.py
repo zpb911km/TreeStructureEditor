@@ -2,46 +2,52 @@ import sys
 
 text0 = open(sys.argv[1], encoding='UTF-8').read()  # sys.argv[1]'E:\myfiles\总结梳理\语文病句.txt'
 text1 = text0.split('\n')
-
+print('opening file...')
 indention = []
 style = []
 space = []
 
-
-if text1[1][0:4] == '    ':
-    for t in range(0, len(text1)):
-        for i in range(0, 20):
-            if text1[t][0:4*i] == '    '*i and text1[t][4*i] != ' ' and text1[t][0] == ' ':
-                indention.append(i)
-                # 0:'├─' , 1:'└─', 2:''
-                style.append(0)
-                text1[t] = text1[t][4*i:]
-                space.append(['    ']*i)
-                break
-            elif text1[t][0] != ' ':  # the first level can not indent
-                indention.append(0)
-                # 0:'├─' , 1:'└─' , 2:''
-                style.append(2)
-                space.append('')
-                break
-else:
-    for t in range(0, len(text1)):
-        for i in range(0, 20):
-            if text1[t][0:i] == text1[t][0]*i and text1[t][i] != text1[t][0] and text1[t][0] == text1[t][0]:
-                indention.append(i)
-                # 0:'├─' , 1:'└─', 2:''
-                style.append(0)
-                text1[t] = text1[t][i:]
-                space.append(['    ']*i)
-                break
-            elif t == 0:  # the first level can not indent
-                indention.append(0)
-                # 0:'├─' , 1:'└─' , 2:''
-                style.append(2)
-                space.append('')
-                break
-
+try:
+    if text1[1][0:4] == '    ':
+        for t in range(0, len(text1)):
+            for i in range(0, 20):
+                if text1[t][0:4*i] == '    '*i and text1[t][4*i] != ' ' and text1[t][0] == ' ':
+                    indention.append(i)
+                    # 0:'├─' , 1:'└─', 2:''
+                    style.append(0)
+                    text1[t] = text1[t][4*i:]
+                    space.append(['    ']*i)
+                    break
+                elif text1[t][0] != ' ':  # the first level can not indent
+                    indention.append(0)
+                    # 0:'├─' , 1:'└─' , 2:''
+                    style.append(2)
+                    space.append('')
+                    break
+    else:
+        for t in range(0, len(text1)):
+            for i in range(0, 20):
+                if text1[t][0:i] == text1[t][0]*i and text1[t][i] != text1[t][0] and text1[t][0] == text1[t][0]:
+                    indention.append(i)
+                    # 0:'├─' , 1:'└─', 2:''
+                    style.append(0)
+                    text1[t] = text1[t][i:]
+                    space.append(['    ']*i)
+                    break
+                elif t == 0:  # the first level can not indent
+                    indention.append(0)
+                    # 0:'├─' , 1:'└─' , 2:''
+                    style.append(2)
+                    space.append('')
+                    break
+except:
+    print('第',t+1,'行出错了！！')
+    i = 10000000
+    while(i):
+        i -= 1
+    exit()
 #  print(indention)
+print('analyzing...')
 for i in range(1, len(text1)):
     for j in range(i+1, len(text1)):
         if indention[i] == indention[j]:
@@ -71,9 +77,17 @@ for i in range(0, len(space)):
     for j in space[i]:
         pstr += j
     #  print(pstr + text1[i])
+    if text1[0] == '@@':
+        pstr = pstr[4:]
+        if i == 0:
+            continue
     sstr += pstr + text1[i] + '\n'
     pstr = ''
 
 with open(sys.argv[1][:-4] + '&' + '.txt', 'w', encoding = 'UTF-8') as file:
     file.write(sstr)
     file.close()
+    print('done')
+    i = 10000000
+    while(i):
+        i -= 1
