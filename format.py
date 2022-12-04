@@ -1,11 +1,19 @@
+print('opening file...')
 import sys
+from time import sleep
 
 text0 = open(sys.argv[1], encoding='UTF-8').read()  # sys.argv[1]'E:\myfiles\总结梳理\语文病句.txt'
 text1 = text0.split('\n')
-print('opening file...')
+
 indention = []
 style = []
 space = []
+while True:
+    try:
+        maxlength = int(input('maxlenth = '))
+        break
+    except:
+        print('输入整数！')
 
 try:
     if text1[1][0:4] == '    ':
@@ -43,8 +51,7 @@ try:
 except:
     print('第',t+1,'行出错了！！')
     i = 10000000
-    while(i):
-        i -= 1
+    sleep(3)
     exit()
 #  print(indention)
 print('analyzing...')
@@ -73,9 +80,24 @@ space[len(text1)-1][indention[len(text1)-1]-1] = '  └─'
 #  print(style)
 pstr = ''
 sstr = ''
+
+
 for i in range(0, len(space)):
     for j in space[i]:
         pstr += j
+    if len(pstr + text1[i] + '\n') >= maxlength:
+        sstr += pstr + text1[i][:maxlength - len(pstr)] + '\n'
+        text1[i] = text1[i][maxlength - len(pstr):]
+        if style[i] == 0:
+            replace = '  │ '
+        else:
+            replace = '    '
+        while len(pstr + text1[i] + '\n') >= maxlength:
+            sstr += pstr[:-4]+ replace + text1[i][:maxlength - len(pstr)] + '\n'
+            text1[i] = text1[i][maxlength - len(pstr):]
+        sstr += pstr[:-4]+ replace + text1[i] + '\n'
+        pstr = ''
+        continue
     #  print(pstr + text1[i])
     if text1[0] == '@@':
         pstr = pstr[4:]
@@ -83,11 +105,11 @@ for i in range(0, len(space)):
             continue
     sstr += pstr + text1[i] + '\n'
     pstr = ''
-
+sstr = sstr[:-1]
+#print(sstr)
 with open(sys.argv[1][:-4] + '&' + '.txt', 'w', encoding = 'UTF-8') as file:
     file.write(sstr)
     file.close()
-    print('done')
-    i = 10000000
-    while(i):
-        i -= 1
+    print('preview:')
+    print(sstr)
+    sleep(3)
