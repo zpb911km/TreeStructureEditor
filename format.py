@@ -86,6 +86,8 @@ for i in range(0, len(space)):
     for j in space[i]:
         pstr += j
     if len(pstr + text1[i] + '\n') >= maxlength:
+        if text1[0] == '@@':
+            pstr = pstr[4:]
         sstr += pstr + text1[i][:maxlength - len(pstr)] + '\n'
         text1[i] = text1[i][maxlength - len(pstr):]
         if style[i] == 0:
@@ -93,8 +95,12 @@ for i in range(0, len(space)):
         else:
             replace = '    '
         while len(pstr + text1[i] + '\n') >= maxlength:
+            if text1[0] == '@@':
+                pstr = pstr[4:]
             sstr += pstr[:-4]+ replace + text1[i][:maxlength - len(pstr)] + '\n'
             text1[i] = text1[i][maxlength - len(pstr):]
+        if text1[0] == '@@':
+            pstr = pstr[4:]
         sstr += pstr[:-4]+ replace + text1[i] + '\n'
         pstr = ''
         continue
