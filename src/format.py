@@ -1,11 +1,4 @@
-while True:
-    try:
-        maxlength = int(input('maxlenth = '))
-        break
-    except:
-        print('输入整数！')
-
-def func(text1,maxlength):
+def func(text1: list[str], maxlength: int) -> str:
     indention = []
     style = []
     space = []
@@ -43,7 +36,8 @@ def func(text1,maxlength):
                         style.append(2)
                         space.append('')
                         break
-    except:
+    except IndexError:
+        raise
         print('第',t+1,'行出错了！！')
         sleep(3)
         #exit()
@@ -112,12 +106,20 @@ def func(text1,maxlength):
 
 
 if __name__ == '__main__':
+    while True:
+        try:
+            maxlength = int(input('maxlenth = '))
+            break
+        except:
+            print('输入整数！')
+
     print('opening file...')
     import sys
     from time import sleep
 
     text0 = open(sys.argv[1], encoding='UTF-8').read()
     text1 = text0.split('\n')
+    print(repr(text1))
     sstr = func(text1, maxlength)
      #print(sstr)
     with open(sys.argv[1][:-4] + '&' + '.txt', 'w', encoding = 'UTF-8') as file:
