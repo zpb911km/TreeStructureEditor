@@ -37,7 +37,6 @@ def func(text1: list[str], maxlength: int) -> str:
                         space.append('')
                         break
     except IndexError:
-        raise
         print('第',t+1,'行出错了！！')
         sleep(3)
         #exit()
@@ -119,7 +118,7 @@ if __name__ == '__main__':
 
     text0 = open(sys.argv[1], encoding='UTF-8').read()
     text1 = text0.split('\n')
-    print(repr(text1))
+    # print(repr(text1))
     sstr = func(text1, maxlength)
      #print(sstr)
     with open(sys.argv[1][:-4] + '&' + '.txt', 'w', encoding = 'UTF-8') as file:
