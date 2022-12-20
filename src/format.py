@@ -1,4 +1,4 @@
-def func(text1: 'list[str]', maxlength: 'int') -> 'str':
+def func(text1: list[str], maxlength: int) -> str:
     indention = []
     style = []
     space = []
@@ -57,9 +57,10 @@ def func(text1: 'list[str]', maxlength: 'int') -> 'str':
         for k in range(i+1, j):
             if style[i] == 0:
                 space[k][indention[i]-1] = '  │ '
-        if style[i] == 0:
+        match style[i]:
+            case 0:
                 space[i][indention[i]-1] = '  ├─'
-        elif style[i] == 1:
+            case 1:
                 space[i][indention[i]-1] = '  └─'
     #  print(i, j, indention[i])
     style[len(text1)-1] = 1

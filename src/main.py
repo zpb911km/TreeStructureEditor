@@ -21,7 +21,7 @@ class MainWindow(QWidget):
         self.widget_container.OutputBox.setPlainText(
             func(
                 self.widget_container.InputBox.toPlainText().splitlines(),
-                100
+                30
             )
         )
 
