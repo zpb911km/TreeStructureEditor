@@ -1,22 +1,27 @@
 guideLine = ['  ├─', '  └─', '  │ ', '    ']# ['├', '└', '│', ' ']
 devider = '\t'  # 仅支持\t缩进
-follower = '^'  # 用^表示接上一行
+follower = '^'  # 用^表示接上一行\u200B
 
 
 def format(text, maxLength=300):
+    RetoEnd = 0
     if text[-1] == '\n':
         text = text[:-1] + '\n' + \
             len(text.split('\n')[-2].split('>', 1)[0])*' ' + '>'
+        RetoEnd = 1
     match text[-2:]:
         case '>>':
             text = text[:-2] + guideLine[3] + '>'
+            RetoEnd = 1
         case '><':
             text = text[:-6] + '>'
+            RetoEnd = 1
         case '>-':
             text1 = ''
             for line in text.split('\n')[:-1]:
                 text1 += line + '\n'
             text = text1[:-1]
+            RetoEnd = 1
     IndList, TxtList = decode(text)
     PreList = trans(IndList)
     output = ''
@@ -48,7 +53,7 @@ def format(text, maxLength=300):
                     output += Pres[:-len(guideLine[0])] + \
                         Replace + follower + TxtList[SrNum] + '\n'
                     break
-    return output[:-1]
+    return output[:-1], RetoEnd
 
 
 def decode(text):

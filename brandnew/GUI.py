@@ -59,7 +59,7 @@ class Ui_MainWindow(object):
         self.plainTextEdit.setObjectName(u"plainTextEdit")
         font = QFont()
         font.setFamilies([u"Cascadia Mono"])
-        font.setPointSize(12)
+        font.setPointSize(16)
         font.setBold(False)
         self.plainTextEdit.setFont(font)
 

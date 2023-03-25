@@ -26,14 +26,16 @@ class MainWindow(QMainWindow):
     def format(self):
         text = self.ui.plainTextEdit.toPlainText()
         try:
-            DoneText = format(text, self.ui.Slider.value())
+            DoneText, RetoEnd = format(text, self.ui.Slider.value())
             Cursor = self.ui.plainTextEdit.textCursor()
             P = Cursor.position()  # 获取光标位置
             self.ui.plainTextEdit.textChanged.disconnect(self.format)
             self.ui.plainTextEdit.setPlainText(DoneText)
             self.ui.plainTextEdit.textChanged.connect(self.format)
-            Cursor.setPosition(P)  # 光标归位
-            #  Cursor.movePosition(QTextCursor.End)
+            if RetoEnd == 0:
+                Cursor.setPosition(P)  # 光标归位
+            else:
+                Cursor.movePosition(QTextCursor.End)
             self.ui.plainTextEdit.setTextCursor(Cursor)
             self.ui.lineEdit.setText('')
         except Exception as E:
@@ -53,7 +55,7 @@ class MainWindow(QMainWindow):
             text = file.read()
         file.close()
         self.ui.plainTextEdit.textChanged.disconnect(self.format)
-        self.ui.plainTextEdit.setPlainText(format(text))
+        self.ui.plainTextEdit.setPlainText(format(text)[0])
         self.ui.plainTextEdit.textChanged.connect(self.format)
 
     def Save(self):
@@ -65,7 +67,7 @@ class MainWindow(QMainWindow):
                 "E:\\myfiles\\总结梳理",
                 "文本文件 (*.zpb)")
             with open(PATH, 'w', encoding='UTF-8') as file:
-                file.write(format(text, 200))
+                file.write(format(text, 200)[0])
         except Exception as E:
             self.ui.lineEdit.setText(str(E) + ' !Save Error!')
 
