@@ -58,7 +58,7 @@
       <property name="font">
        <font>
         <family>Cascadia Mono</family>
-        <pointsize>12</pointsize>
+        <pointsize>18</pointsize>
         <bold>false</bold>
        </font>
       </property>
@@ -109,6 +109,13 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <tabstops>
+  <tabstop>Slider</tabstop>
+  <tabstop>plainTextEdit</tabstop>
+  <tabstop>Save</tabstop>
+  <tabstop>Open</tabstop>
+  <tabstop>lineEdit</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
