@@ -15,15 +15,21 @@ class MainWindow(QWidget):
         self.widget_container = Ui_MainWindow()
         self.widget_container.setupUi(self)
         self.widget_container.TransformationButton.clicked.connect(self.transform)
+        self.widget_container.InputBox.textChanged.connect(self.auto_transform)
 
     @Slot()
     def transform(self) -> None:
         self.widget_container.OutputBox.setPlainText(
             func(
                 self.widget_container.InputBox.toPlainText().splitlines(),
-                40
+                self.widget_container.spinBox.value()
             )
         )
+
+    @Slot()
+    def auto_transform(self) -> None:
+        if self.widget_container.AutoTransCheckBox.isChecked():
+            self.transform()
 
 
 if __name__ == '__main__':
