@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QPlainTextEdit, QFileDialog
 from PySide6.QtGui import QTextCursor
 from GUI import Ui_MainWindow
-from newcore import format
+from core import format
 
 
 class MainWindow(QMainWindow):
@@ -10,6 +10,7 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.Slider.setValue(200)
+        self.ui.horizontalSlider.setValue(16)
         self.ui.maxlength.setText('200')
         # 禁止自动换行
         self.ui.plainTextEdit.setLineWrapMode(QPlainTextEdit.NoWrap)
@@ -19,6 +20,13 @@ class MainWindow(QMainWindow):
         self.ui.Slider.valueChanged.connect(self.format)
         self.ui.Open.clicked.connect(self.Open)
         self.ui.Save.clicked.connect(self.Save)
+        self.ui.fontComboBox.currentFontChanged.connect(self.setfont)
+        self.ui.horizontalSlider.valueChanged.connect(self.setfont)
+
+    def setfont(self):
+        font = self.ui.fontComboBox.currentFont()
+        font.setPointSize(self.ui.horizontalSlider.value())
+        self.ui.plainTextEdit.setFont(font)
 
     def getchange(self):
         self.ui.maxlength.setText(str(self.ui.Slider.value()))

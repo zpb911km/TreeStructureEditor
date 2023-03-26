@@ -35,7 +35,7 @@ def format(text, maxLength=300):
         else:
             Replace = guideLine[3]
         output += Pres
-        if maxLength - PreLength <= 0:
+        if maxLength - PreLength <= 2:
             raise Exception('Too short!')
         if len('>' + TxtList[SrNum]) <= maxLength - PreLength:
             output += '>' + TxtList[SrNum] + '\n'

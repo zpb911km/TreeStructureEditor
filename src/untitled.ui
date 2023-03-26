@@ -20,7 +20,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QLabel" name="label">
         <property name="maximumSize">
@@ -51,15 +51,40 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QFontComboBox" name="fontComboBox">
+        <property name="maximumSize">
+         <size>
+          <width>141</width>
+          <height>22</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSlider" name="horizontalSlider">
+        <property name="maximumSize">
+         <size>
+          <width>100000</width>
+          <height>22</height>
+         </size>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
     <item>
      <widget class="QPlainTextEdit" name="plainTextEdit">
       <property name="font">
        <font>
-        <family>Cascadia Mono</family>
-        <pointsize>18</pointsize>
-        <bold>false</bold>
+        <family>Cascadia Mono SemiLight</family>
+        <pointsize>16</pointsize>
        </font>
       </property>
       <property name="plainText">
@@ -68,7 +93,7 @@
      </widget>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
        <widget class="QLabel" name="label_2">
         <property name="text">
