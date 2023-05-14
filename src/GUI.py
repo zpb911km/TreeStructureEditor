@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(798, 577)
         icon = QIcon()
-        icon.addFile(u"\"E:/myfiles/python/symbol.png\"", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u"E:/myfiles/python/symbol.png", QSize(), QIcon.Normal, QIcon.Off)
         MainWindow.setWindowIcon(icon)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
@@ -55,6 +55,10 @@ class Ui_MainWindow(object):
         self.fontComboBox = QFontComboBox(self.centralwidget)
         self.fontComboBox.setObjectName(u"fontComboBox")
         self.fontComboBox.setMaximumSize(QSize(141, 22))
+        font = QFont()
+        font.setFamilies([u"Cascadia Mono SemiLight"])
+        font.setPointSize(14)
+        self.fontComboBox.setCurrentFont(font)
 
         self.horizontalLayout.addWidget(self.fontComboBox)
 
@@ -71,10 +75,10 @@ class Ui_MainWindow(object):
 
         self.plainTextEdit = QPlainTextEdit(self.centralwidget)
         self.plainTextEdit.setObjectName(u"plainTextEdit")
-        font = QFont()
-        font.setFamilies([u"Cascadia Mono SemiLight"])
-        font.setPointSize(16)
-        self.plainTextEdit.setFont(font)
+        font1 = QFont()
+        font1.setFamilies([u"Cascadia Mono SemiLight"])
+        font1.setPointSize(16)
+        self.plainTextEdit.setFont(font1)
 
         self.verticalLayout.addWidget(self.plainTextEdit)
 

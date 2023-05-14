@@ -59,6 +59,12 @@
           <height>22</height>
          </size>
         </property>
+        <property name="currentFont">
+         <font>
+          <family>Cascadia Mono SemiLight</family>
+          <pointsize>14</pointsize>
+         </font>
+        </property>
        </widget>
       </item>
       <item>

@@ -1,4 +1,4 @@
-PATH = "D:\新建文件夹\化学坑点.zpb"
+PATH = "E:\myfiles\总结梳理\生物章节小结.zpb"
 olist = []
 raw = ''
 with open(PATH, encoding='UTF-8') as produced:

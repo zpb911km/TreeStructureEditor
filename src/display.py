@@ -2,6 +2,27 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QPlainTextEdit, QFileDi
 from PySide6.QtGui import QTextCursor
 from GUI import Ui_MainWindow
 from core import format
+from time import time
+
+
+def Replace(text):
+    rpl = [
+        ['\t', '    '],
+        ['-》', '→'],
+        ['》', '>'],
+        ['《', '<'],
+        ['，', ','],
+        ['。', '.'],
+        ['：', ':'],
+        ['；', ';'],
+        ['（', '('],
+        ['）', ')'],
+        ['……', '...'],
+        ['、', ',']
+    ]
+    for pair in rpl:
+        text = text.replace(pair[0], pair[1])
+    return text
 
 
 class MainWindow(QMainWindow):
@@ -22,6 +43,8 @@ class MainWindow(QMainWindow):
         self.ui.Save.clicked.connect(self.Save)
         self.ui.fontComboBox.currentFontChanged.connect(self.setfont)
         self.ui.horizontalSlider.valueChanged.connect(self.setfont)
+        self.LST = time()
+        self.count = 0
 
     def setfont(self):
         font = self.ui.fontComboBox.currentFont()
@@ -32,7 +55,7 @@ class MainWindow(QMainWindow):
         self.ui.maxlength.setText(str(self.ui.Slider.value()))
 
     def format(self):
-        text = self.ui.plainTextEdit.toPlainText()
+        text = Replace(self.ui.plainTextEdit.toPlainText())
         try:
             DoneText, RetoEnd = format(text, self.ui.Slider.value())
             Cursor = self.ui.plainTextEdit.textCursor()
@@ -46,9 +69,14 @@ class MainWindow(QMainWindow):
                 Cursor.movePosition(QTextCursor.End)
             self.ui.plainTextEdit.setTextCursor(Cursor)
             self.ui.lineEdit.setText('')
+            if time() - self.LST >= 60:
+                self.AutoSave()
+                self.LST = time()
+            else:
+                self.ui.lineEdit.setText('')
         except Exception as E:
             self.ui.lineEdit.setText(str(E))
-    
+
     def Open(self):
         PATH, _ = QFileDialog.getOpenFileName(
             self,
@@ -67,7 +95,7 @@ class MainWindow(QMainWindow):
         self.ui.plainTextEdit.textChanged.connect(self.format)
 
     def Save(self):
-        text = self.ui.plainTextEdit.toPlainText()
+        text = Replace(self.ui.plainTextEdit.toPlainText())
         try:
             PATH, _ = QFileDialog.getSaveFileName(
                 self,
@@ -76,8 +104,30 @@ class MainWindow(QMainWindow):
                 "文本文件 (*.zpb)")
             with open(PATH, 'w', encoding='UTF-8') as file:
                 file.write(format(text, 200)[0])
+            self.ui.lineEdit.setText('Saved!')
         except Exception as E:
             self.ui.lineEdit.setText(str(E) + ' !Save Error!')
+
+    def AutoSave(self):
+        text = Replace(self.ui.plainTextEdit.toPlainText())
+        if self.count == 0:
+            try:
+                self.PATH, _ = QFileDialog.getSaveFileName(
+                    self,
+                    "保存",
+                    "E:\\myfiles\\总结梳理",
+                    "文本文件 (*.zpb)")
+                self.count = 1
+                with open(self.PATH, 'w', encoding='UTF-8') as file:
+                    file.write(format(text, 200)[0])
+                self.ui.lineEdit.setText('Saved!')
+            except Exception as E:
+                self.ui.lineEdit.setText(str(E) + '路径未设置!')
+        else:
+            with open(self.PATH, 'w', encoding='UTF-8') as file:
+                file.write(format(text, 200)[0])
+            self.ui.lineEdit.setText('Saved!')
+
 
 
 if __name__ == '__main__':
