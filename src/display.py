@@ -7,8 +7,9 @@ from time import time
 
 def Replace(text):
     rpl = [
-        ['\t', '    '],
-        ['-》', '→'],
+        ['\t', '  '],
+        ['--》', '→'],
+        ['-->', '→'],
         ['》', '>'],
         ['《', '<'],
         ['，', ','],
@@ -18,7 +19,16 @@ def Replace(text):
         ['（', '('],
         ['）', ')'],
         ['……', '...'],
-        ['、', ',']
+        ['、', ','],
+        ['！', '!'],
+        ['？', '?'],
+        ['“', '"'],
+        ['”', '"'],
+        ['【', '['],
+        ['】', ']'],
+        ['`', '·'],
+        ['<=', '≤'],
+        ['>=', '≥']
     ]
     for pair in rpl:
         text = text.replace(pair[0], pair[1])
@@ -31,7 +41,7 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.Slider.setValue(200)
-        self.ui.horizontalSlider.setValue(16)
+        self.ui.horizontalSlider.setValue(20)
         self.ui.maxlength.setText('200')
         # 禁止自动换行
         self.ui.plainTextEdit.setLineWrapMode(QPlainTextEdit.NoWrap)
@@ -69,8 +79,8 @@ class MainWindow(QMainWindow):
                 Cursor.movePosition(QTextCursor.End)
             self.ui.plainTextEdit.setTextCursor(Cursor)
             self.ui.lineEdit.setText('')
-            if time() - self.LST >= 60:
-                self.AutoSave()
+            if time() - self.LST >= 10:
+                self.Save()
                 self.LST = time()
             else:
                 self.ui.lineEdit.setText('')
@@ -78,60 +88,53 @@ class MainWindow(QMainWindow):
             self.ui.lineEdit.setText(str(E))
 
     def Open(self):
-        PATH, _ = QFileDialog.getOpenFileName(
+        self.PATH, _ = QFileDialog.getOpenFileName(
             self,
             '打开',
-            "E:\myfiles\总结梳理",
+            "E:\\myfiles\\总结梳理\\zpb",
             "文本文件 (*.zpb *.txt)")
         try:
-            file = open(PATH, encoding='UTF-8')
+            file = open(self.PATH, encoding='UTF-8')
             text = file.read()
         except UnicodeDecodeError:
-            file = open(PATH, encoding='ANSI')
+            file = open(self.PATH, encoding='ANSI')
             text = file.read()
         file.close()
+        self.count = 1
         self.ui.plainTextEdit.textChanged.disconnect(self.format)
         self.ui.plainTextEdit.setPlainText(format(text)[0])
         self.ui.plainTextEdit.textChanged.connect(self.format)
 
     def Save(self):
         text = Replace(self.ui.plainTextEdit.toPlainText())
-        try:
-            PATH, _ = QFileDialog.getSaveFileName(
-                self,
-                "保存",
-                "E:\\myfiles\\总结梳理",
-                "文本文件 (*.zpb)")
-            with open(PATH, 'w', encoding='UTF-8') as file:
-                file.write(format(text, 200)[0])
-            self.ui.lineEdit.setText('Saved!')
-        except Exception as E:
-            self.ui.lineEdit.setText(str(E) + ' !Save Error!')
-
-    def AutoSave(self):
-        text = Replace(self.ui.plainTextEdit.toPlainText())
         if self.count == 0:
             try:
                 self.PATH, _ = QFileDialog.getSaveFileName(
                     self,
                     "保存",
-                    "E:\\myfiles\\总结梳理",
+                    "E:\\myfiles\\总结梳理\\zpb",
                     "文本文件 (*.zpb)")
                 self.count = 1
                 with open(self.PATH, 'w', encoding='UTF-8') as file:
                     file.write(format(text, 200)[0])
                 self.ui.lineEdit.setText('Saved!')
             except Exception as E:
-                self.ui.lineEdit.setText(str(E) + '路径未设置!')
+                self.ui.lineEdit.setText(str(E) + ' !Save Error!')
         else:
             with open(self.PATH, 'w', encoding='UTF-8') as file:
                 file.write(format(text, 200)[0])
             self.ui.lineEdit.setText('Saved!')
-
+            # sleep(0.5)
 
 
 if __name__ == '__main__':
     app = QApplication([])
     main_window = MainWindow()
+    try:
+        with open(r'E:\\myfiles\\python\\format\\src\\style.qss', 'r', encoding='UTF-8') as file:
+            style_sheet = file.read()
+    except FileNotFoundError:
+        style_sheet = ''  # QWidget{color: #eb6;background-color: #013;background-image: url(E:\\myfiles\\python\\symbol.png)}
+    main_window.setStyleSheet(style_sheet)
     main_window.show()
     app.exec()

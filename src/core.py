@@ -1,6 +1,6 @@
-guideLine = ['  ├─', '  └─', '  │ ', '    ']# ['├', '└', '│', ' ']
+guideLine = [' ├', ' └', ' │', '  ']  # ['  ├─', '  └─', '  │ ', '    ']
 devider = '\t'  # 仅支持\t缩进
-follower = '^'  # 用^表示接上一行\u200B
+follower = '\u200B'  # 用^表示接上一行\u200B
 
 
 def format(text, maxLength=300):
@@ -14,7 +14,7 @@ def format(text, maxLength=300):
             text = text[:-2] + guideLine[3] + '>'
             RetoEnd = 1
         case '><':
-            text = text[:-6] + '>'
+            text = text[:-(len(guideLine[0])+2)] + '>'
             RetoEnd = 1
         case '>-':
             text1 = ''
@@ -61,7 +61,7 @@ def decode(text):
     TxtList = []
     for line in text.split('\n'):
         if '>' in line:
-            IndList.append(int(len(line.split('>', 1)[0]) / len(guideLine[3])))  # TODO:
+            IndList.append(int(len(line.split('>', 1)[0]) / len(guideLine[3])))
             TxtList.append(line.split('>', 1)[-1])
         elif follower in line:
             TxtList[-1] += line.split(follower, 1)[-1]
@@ -92,4 +92,4 @@ def trans(IndList):
 
 
 if __name__ == '__main__':
-    print(format('>abcdefghijklmnopqrstuvwxyzabc\n  │ ^defghijklmnopqrstuvwxy\n  ├─>abcdefghijklmnopqrstuvwxy\n  │ ^zabcdefghijklmnopqrstuvwx\n  │ ^y\n  │   └─>abcde\n  ├─>dse\n  │   └─>2\n  ├─>1\n  │   └─>2\n  │       └─>abcdefghijklmnopq\n  │         ^rstuvwxyzabcdefgh\n  │         ^ijklmnopqrstuvwxy\n  └─    >-', 35))
+    print(format('>abcdefghijklmnopqrstuvwxyzabc\n  │ ^defghijklmnopqrstuvwxy\n  ├─>abcdefghijklmnopqrstuvwxy\n  │ ^zabcdefghijklmnopqrstuvwx\n  │ ^y\n  │   └─>abcde\n  ├─>dse\n  │   └─>2\n  ├─>1\n  │   └─>2\n  │       └─>abcdefghijklmnopq\n  │         ^rstuvwxyzabcdefgh\n  │         ^ijklmnopqrstuvwxy\n  └─    >-', 35)[0])
