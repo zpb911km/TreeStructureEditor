@@ -5,11 +5,19 @@ from core import format
 from time import time
 
 
+isInit = 0
+
+
 def Replace(text):
     rpl = [
-        ['\t', '  '],
+        ['?=', '≟'],
         ['--》', '→'],
         ['-->', '→'],
+        ['《--', '←'],
+        ['<--', '←'],
+        ['<->', '↔'],
+        ['《-》', '↔'],
+        ['*·', '×'],
         ['》', '>'],
         ['《', '<'],
         ['，', ','],
@@ -30,6 +38,9 @@ def Replace(text):
         ['<=', '≤'],
         ['>=', '≥']
     ]
+    global isInit
+    if isInit == 1:
+        rpl.append(['\t', '  '])    
     for pair in rpl:
         text = text.replace(pair[0], pair[1])
     return text
@@ -66,6 +77,8 @@ class MainWindow(QMainWindow):
 
     def format(self):
         text = Replace(self.ui.plainTextEdit.toPlainText())
+        global isInit
+        isInit = 1
         try:
             DoneText, RetoEnd = format(text, self.ui.Slider.value())
             Cursor = self.ui.plainTextEdit.textCursor()
@@ -91,7 +104,7 @@ class MainWindow(QMainWindow):
         self.PATH, _ = QFileDialog.getOpenFileName(
             self,
             '打开',
-            "E:\\myfiles\\总结梳理\\zpb",
+            "E:\\Nutstore\\总结梳理",
             "文本文件 (*.zpb *.txt)")
         try:
             file = open(self.PATH, encoding='UTF-8')
@@ -101,7 +114,10 @@ class MainWindow(QMainWindow):
             text = file.read()
         file.close()
         self.count = 1
-        self.ui.plainTextEdit.textChanged.disconnect(self.format)
+        try:
+            self.ui.plainTextEdit.textChanged.disconnect(self.format)
+        except RuntimeError:
+            pass
         self.ui.plainTextEdit.setPlainText(format(text)[0])
         self.ui.plainTextEdit.textChanged.connect(self.format)
 
@@ -112,7 +128,7 @@ class MainWindow(QMainWindow):
                 self.PATH, _ = QFileDialog.getSaveFileName(
                     self,
                     "保存",
-                    "E:\\myfiles\\总结梳理\\zpb",
+                    "E:\\Nutstore\\总结梳理",
                     "文本文件 (*.zpb)")
                 self.count = 1
                 with open(self.PATH, 'w', encoding='UTF-8') as file:
