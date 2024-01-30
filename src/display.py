@@ -147,7 +147,7 @@ if __name__ == '__main__':
     app = QApplication([])
     main_window = MainWindow()
     try:
-        with open(r'E:\\myfiles\\python\\format\\src\\style.qss', 'r', encoding='UTF-8') as file:
+        with open(r'E:\\myfiles\\python\\TreeStructureEditor\\src\\style.qss', 'r', encoding='UTF-8') as file:
             style_sheet = file.read()
     except FileNotFoundError:
         style_sheet = ''  # QWidget{color: #eb6;background-color: #013;background-image: url(E:\\myfiles\\python\\symbol.png)}

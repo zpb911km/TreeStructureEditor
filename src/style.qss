@@ -1,6 +1,6 @@
 /* 设置窗口背景颜色 */
 QWidget{
-    color: rgb(124, 255, 255);
+    color: rgb(240, 241, 186);
     background-color: rgb(3, 8, 51);
     }
 

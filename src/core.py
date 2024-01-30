@@ -1,6 +1,6 @@
 guideLine = [' ├', ' └', ' │', '  ']  # ['  ├─', '  └─', '  │ ', '    ']
 devider = '\t'  # 仅支持\t缩进
-follower = ' |'  # 用^表示接上一行\u200B
+follower = ' \u200B'  # 用表示接上一行
 
 
 def format(text, maxLength=300):
