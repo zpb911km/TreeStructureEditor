@@ -3,7 +3,7 @@ import unicodedata
 
 center = False
 min_width = 5
-arrow = '\u200b'
+arrow = '►'
 
 
 class Node():
@@ -75,6 +75,10 @@ def parser_tree2internal(tree_str: str) -> list[Node]:
 
 
 def parser_text2internal(text):
+    if len(text.split('\n')) > 1:
+        if text[0] in ['>', '\u200b', '▻', '►', '▹', '▸']:
+            arrow = text[0]
+
     def table_to_list(table_str: str, rows: int, cols: int) -> list[list[str]]:
         try:
             c = ['─', '│', '┌', '┘', '└', '┐', '├', '┤', '┬', '┴', '┼']
