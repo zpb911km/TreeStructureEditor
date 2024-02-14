@@ -76,8 +76,12 @@ def parser_tree2internal(tree_str: str) -> list[Node]:
 
 def parser_text2internal(text):
     if len(text.split('\n')) > 1:
-        if text[0] in ['>', '\u200b', '▻', '►', '▹', '▸']:
+        if text[0] in ['>', '\u200b', '▻', '►', '▹', '▸', '']:
             arrow = text[0]
+        else:
+            arrow = '►'
+    else:
+        arrow = '►'
 
     def table_to_list(table_str: str, rows: int, cols: int) -> list[list[str]]:
         try:
@@ -174,7 +178,7 @@ def parser_list2table(dataMap: list[list[str]], center: bool = False, min_width:
 
     def get_east_asian_width_count(text):
         """计算字符串的打印宽度，考虑东亚宽度字符。"""
-        return sum(2 if unicodedata.east_asian_width(char) in 'FWA' else 1 for char in text)
+        return sum(2 if unicodedata.east_asian_width(char) in 'FW' else 1 for char in text)
 
     # 计算每一列的最大宽度
     col_widths = [max(get_east_asian_width_count(cell) for cell in column) for column in zip(*dataMap)]

@@ -1,7 +1,7 @@
-from PySide6.QtCore import Qt, QSize, QEventLoop, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QFont, QTextCursor
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QFileDialog, QFontComboBox
-from qfluentwidgets import SplitTitleBar, MSFluentTitleBar, FluentTitleBar, TitleLabel, CommandBar, Action, setFont, SplashScreen, PlainTextEdit, SpinBox, InfoBar, setTheme, Theme, FluentIcon, InfoBarPosition, MessageBoxBase, SubtitleLabel
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QFileDialog, QFontComboBox
+from qfluentwidgets import FluentTitleBar, CommandBar, Action, setFont, SplashScreen, PlainTextEdit, SpinBox, InfoBar, setTheme, Theme, FluentIcon, InfoBarPosition, MessageBoxBase, SubtitleLabel
 from qframelesswindow import AcrylicWindow
 from time import time
 from core import parser_internal2text, parser_text2internal
@@ -9,6 +9,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
+import unicodedata
 
 
 def Replace(text):
@@ -83,20 +84,13 @@ class MainWindow(AcrylicWindow):
         self.resize(700, 600)
         setTheme(Theme.DARK)
         self.setWindowTitle("TreeStructureEditor V0.1.9")
-        self.setStyleSheet('MainWindow{background: rgba(0, 20, 30, 0.7)}')
-        self.splashScreen = SplashScreen(QIcon(".\\resource\\symbol1.png"), self)
-        self.splashScreen.setIconSize(QSize(100, 100))
-        self.show()
-        loop = QEventLoop(self)
-        QTimer.singleShot(1000, loop.quit)
-        loop.exec()
-        self.splashScreen.finish()
+        self.setWindowIcon(QIcon(".\\resource\\symbol1.png"))
+        self.setTitleBar(FluentTitleBar(self))
+        # self.windowEffect.setAeroEffect(self.winId())
+        self.windowEffect.setAcrylicEffect(self.winId(), '00102030')
         self.verticalLayout = QVBoxLayout(self)
-        self.titleLable = SubtitleLabel(self)
-        setFont(self.titleLable, 16)
-        self.titleLable.setText(self.windowTitle())
-        self.titleLable.setMaximumSize(QSize(200, 18))
-        self.verticalLayout.addWidget(self.titleLable)
+        self.verticalLayout.setContentsMargins(10, 35, 10, 10)
+        self.verticalLayout.setAlignment(Qt.AlignTop)
         self.CommandBar = CommandBar(self)
         self.CommandBar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.CommandBar.addAction(Action(FluentIcon.FOLDER, 'Open', triggered=self.Open, shortcut='Ctrl+O'))
@@ -116,18 +110,18 @@ class MainWindow(AcrylicWindow):
 
     def PrintPDF(self):
         text = Replace(self.plainTextEdit.toPlainText())
-        self.PATH, _ = QFileDialog.getSaveFileName(
+        PATH, _ = QFileDialog.getSaveFileName(
             self,
             "保存",
             "E:\\Nutstore\\总结梳理",
             "PDF文件 (*.pdf)")
-        if self.PATH != '':
-            with open(self.PATH, 'w', encoding='UTF-8') as file:
+        if PATH != '':
+            with open(PATH, 'w', encoding='UTF-8') as file:
                 file.write(format(text))
             self.count = 1
             InfoBar.success(
-                title='Saved!',
-                content=self.PATH,
+                title='Saved PDF!',
+                content=PATH,
                 orient=Qt.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP,
@@ -146,7 +140,7 @@ class MainWindow(AcrylicWindow):
             )
             return None
         contentl = text.split('\n')
-        c = canvas.Canvas(self.PATH, pagesize=A4)
+        c = canvas.Canvas(PATH, pagesize=A4)
         pdfmetrics.registerFont(TTFont('Unifont', 'Unifont.ttf'))
         c.setFont("Unifont", 12)
         y = 785
@@ -158,7 +152,6 @@ class MainWindow(AcrylicWindow):
                 c.setFont("Unifont", 12)  # 设置新页面的字体
                 y = 760  # 重置y坐标
         c.save()
-
 
     def changeFont(self):
         size = self.plainTextEdit.font().pointSize()
@@ -256,6 +249,18 @@ class MainWindow(AcrylicWindow):
             end = 0
         try:
             t = parser_internal2text(parser_text2internal(text))
+            for n, i in enumerate(t.split('\n')):
+                if sum(2 if unicodedata.east_asian_width(char) in 'FW' else 1 for char in i) >= 90:
+                    InfoBar.warning(
+                        title='WARNING!',
+                        content="第" + str(n + 1) + "行字符数量过多!\n请考虑换行!",
+                        orient=Qt.Horizontal,
+                        isClosable=True,
+                        position=InfoBarPosition.TOP,
+                        duration=2000,
+                        parent=self
+                    )
+            # TODO text protection
             Cursor = self.plainTextEdit.textCursor()
             P = Cursor.position()  # 获取光标位置
             self.plainTextEdit.textChanged.disconnect(self.format)
