@@ -3,7 +3,7 @@ from PySide6.QtGui import QIcon, QFont, QTextCursor
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QFileDialog, QFontComboBox
 from qfluentwidgets import FluentTitleBar, CommandBar, Action, setFont, SplashScreen, PlainTextEdit, SpinBox, InfoBar, setTheme, Theme, FluentIcon, InfoBarPosition, MessageBoxBase, SubtitleLabel
 from qframelesswindow import AcrylicWindow
-from time import time
+from time import time, sleep
 from core import parser_internal2text, parser_text2internal
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas

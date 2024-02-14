@@ -63,14 +63,14 @@ def parser_tree2internal(tree_str: str) -> list[Node]:
     Returns:
         list[Node]: list of Node(level:int, content:str), also 'the internal data'
     '''
-    lines = tree_str.strip().split('\n')
+    lines = tree_str.split('\n')
     nodes = []
     for line in lines:
         if arrow not in line:
             continue
         prefix, content = line.split(arrow, 1)
         level = len(prefix) // 2 + 1
-        nodes.append(Node(level, content.strip()))
+        nodes.append(Node(level, content))
     return nodes
 
 
@@ -127,9 +127,12 @@ def parser_text2internal(text):
         if len(line) == 0:
             level = len(lines[i - 1].split(arrow, 1)[0]) // 2 + 1
             content = ''
+        elif arrow not in line:
+            level = len(line) // 2 + 1
+            content = ''
         else:
             level = len(line.split(arrow, 1)[0]) // 2 + 1
-            content = line.split(arrow, 1)[-1].strip()
+            content = line.split(arrow, 1)[-1]
         if content.startswith('Table('):
             table_rows = int(content.split('(')[1].split(',')[0])
             table_cols = int(content.split(',')[1].split(')')[0])
