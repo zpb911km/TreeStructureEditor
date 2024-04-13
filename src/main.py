@@ -1,9 +1,9 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QFont, QTextCursor
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QFileDialog, QFontComboBox
-from qfluentwidgets import FluentTitleBar, CommandBar, Action, setFont, SplashScreen, PlainTextEdit, SpinBox, InfoBar, setTheme, Theme, FluentIcon, InfoBarPosition, MessageBoxBase, SubtitleLabel
+from qfluentwidgets import FluentTitleBar, label, CommandBar, Action, PlainTextEdit, SpinBox, InfoBar, setTheme, Theme, FluentIcon, InfoBarPosition, MessageBoxBase, SubtitleLabel
 from qframelesswindow import AcrylicWindow
-from time import time, sleep
+from time import time
 from core import parser_internal2text, parser_text2internal
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -13,36 +13,19 @@ import unicodedata
 
 
 def Replace(text):
-    rpl = [
-        ['?=', '≟'],
-        ['--》', '→'],
-        ['-->', '→'],
-        ['《--', '←'],
-        ['<--', '←'],
-        ['<->', '↔'],
-        ['《-》', '↔'],
-        ['*·', '×'],
-        ['》', '>'],
-        ['《', '<'],
-        ['，', ','],
-        ['。', '.'],
-        ['：', ':'],
-        ['；', ';'],
-        ['（', '('],
-        ['）', ')'],
-        ['……', '...'],
-        ['、', ','],
-        ['！', '!'],
-        ['？', '?'],
-        ['“', '"'],
-        ['”', '"'],
-        ['【', '['],
-        ['】', ']'],
-        ['`', '·'],
-        ['<=', '≤'],
-        ['>=', '≥'],
-        ['\t', '  ']
-    ]
+    rpl = []
+    try:
+        open('E:\\myfiles\\python\\TreeStructureEditor\\resource\\replace_sheet.txt', 'r', encoding='UTF-8')
+    except FileNotFoundError:
+        return text
+    with open('E:\\myfiles\\python\\TreeStructureEditor\\resource\\replace_sheet.txt', 'r', encoding='UTF-8') as sheet:
+        lines = sheet.read().split('\n')
+        for line in lines:
+            if len(line) == 0:
+                continue
+            if line[0] == '#':
+                continue
+            rpl.append((line.split('~~~')[0], line.split('~~~')[1]))
     for pair in rpl:
         text = text.replace(pair[0], pair[1])
     return text
@@ -81,10 +64,15 @@ class FontMessageBox(MessageBoxBase):
 class MainWindow(AcrylicWindow):
     def __init__(self):
         super().__init__()
+        self.setupUI()
+        self.count = 0
+        self.LST = time()
+        self.text_ = ''
+
+    def setupUI(self):
         self.resize(700, 600)
         setTheme(Theme.DARK)
-        self.setWindowTitle("TreeStructureEditor V0.1.9")
-        self.setWindowIcon(QIcon(".\\resource\\symbol1.png"))
+        self.setWindowIcon(QIcon("E:\\myfiles\\python\\TreeStructureEditor\\resource\\symbol1.png"))
         self.setTitleBar(FluentTitleBar(self))
         # self.windowEffect.setAeroEffect(self.winId())
         self.windowEffect.setAcrylicEffect(self.winId(), '00102030')
@@ -96,6 +84,7 @@ class MainWindow(AcrylicWindow):
         self.CommandBar.addAction(Action(FluentIcon.FOLDER, 'Open', triggered=self.Open, shortcut='Ctrl+O'))
         self.CommandBar.addAction(Action(FluentIcon.SAVE, 'Save', triggered=self.Save, shortcut='Ctrl+S'))
         self.CommandBar.addSeparator()
+        self.CommandBar.addAction(Action(FluentIcon.SYNC, 'Refresh', triggered=self.format, shortcut='F5'))
         self.CommandBar.addAction(Action(FluentIcon.PRINT, 'Print', triggered=self.PrintPDF, shortcut='Ctrl+P'))
         self.CommandBar.addAction(Action(FluentIcon.FONT, 'Font', triggered=self.changeFont))
         self.CommandBar.addAction(Action(FluentIcon.FONT_SIZE, 'Font Size', triggered=self.setFontSize))
@@ -104,9 +93,11 @@ class MainWindow(AcrylicWindow):
         self.plainTextEdit.setFont(QFont(['Unifont'], 16))
         self.plainTextEdit.setLineWrapMode(PlainTextEdit.NoWrap)
         self.verticalLayout.addWidget(self.plainTextEdit)
+        self.status = label.QLabel()
+        self.status.setStyleSheet('QLabel{color:#70ffffff;}')
+        self.verticalLayout.addWidget(self.status)
         self.plainTextEdit.textChanged.connect(self.format)
-        self.count = 0
-        self.LST = time()
+        self.setWindowTitle("TreeStructureEditor V0.2.0")
 
     def PrintPDF(self):
         text = Replace(self.plainTextEdit.toPlainText())
@@ -119,25 +110,9 @@ class MainWindow(AcrylicWindow):
             with open(PATH, 'w', encoding='UTF-8') as file:
                 file.write(format(text))
             self.count = 1
-            InfoBar.success(
-                title='Saved PDF!',
-                content=PATH,
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=2000,
-                parent=self
-            )
+            self.info('success', 'Saved PDF!', PATH, 2000)
         else:
-            InfoBar.error(
-                title='ERROR!',
-                content="Path ???",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=2000,
-                parent=self
-            )
+            self.info('error', 'error', 'Invalid Path!')
             return None
         contentl = text.split('\n')
         c = canvas.Canvas(PATH, pagesize=A4)
@@ -171,15 +146,7 @@ class MainWindow(AcrylicWindow):
             "E:\\Nutstore\\总结梳理",
             "文本文件 (*.zpb *.txt)")
         if self.PATH == '':
-            InfoBar.error(
-                title='ERROR!',
-                content="Path ???",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=2000,
-                parent=self
-            )
+            self.info('error', 'error', 'Invalid Path!')
             return None
         try:
             file = open(self.PATH, encoding='UTF-8')
@@ -187,14 +154,46 @@ class MainWindow(AcrylicWindow):
         except UnicodeDecodeError:
             file = open(self.PATH, encoding='ANSI')
             text = file.read()
+        self.setWindowTitle(self.windowTitle() + '  ' + file.name.split('/')[-1].split('.')[0])
         file.close()
         self.count = 1
-        try:
-            self.plainTextEdit.textChanged.disconnect(self.format)
-        except RuntimeError:
-            pass
+        self.plainTextEdit.textChanged.disconnect(self.format)
         self.plainTextEdit.setPlainText(text)
         self.plainTextEdit.textChanged.connect(self.format)
+
+    def info(self, status: str, title='', content: str = '', delay: int = 2000):
+        if len(title) == 0:
+            title = status
+        if status == 'success':
+            InfoBar.success(
+                title=title,
+                content=content,
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=delay,
+                parent=self
+            )
+        elif status == 'error':
+            InfoBar.error(
+                title=title,
+                content=content,
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=delay,
+                parent=self
+            )
+        elif status == 'warning':
+            InfoBar.warning(
+                title=title,
+                content=content,
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=delay,
+                parent=self
+            )
 
     def Save(self):
         text = Replace(self.plainTextEdit.toPlainText())
@@ -208,82 +207,52 @@ class MainWindow(AcrylicWindow):
                 with open(self.PATH, 'w', encoding='UTF-8') as file:
                     file.write(format(text))
                 self.count = 1
-                InfoBar.success(
-                    title='Saved!',
-                    content=self.PATH,
-                    orient=Qt.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=2000,
-                    parent=self
-                )
+                self.info('success', 'Saved!', self.PATH)
             else:
-                InfoBar.error(
-                    title='ERROR!',
-                    content="Path ???",
-                    orient=Qt.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=2000,
-                    parent=self
-                )
+                self.info('error', 'error', 'Invalid Path!')
                 self.count = 0
         else:
             with open(self.PATH, 'w', encoding='UTF-8') as file:
                 file.write(format(text))
-            InfoBar.success(
-                title='Saved!',
-                content=self.PATH,
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=2000,
-                parent=self
-            )
+            self.info('success', 'Saved!', self.PATH)
 
     def format(self):
-        text = Replace(self.plainTextEdit.toPlainText())
-        if text[-1] == '\n':
-            end = 1
-        else:
-            end = 0
+        text = self.plainTextEdit.toPlainText()
+        Cursor = self.plainTextEdit.textCursor()
+        P = Cursor.position()  # 获取光标位置, type: int
+        positionMark = '🥟'
+        text = text[:P] + positionMark + text[P:]
+        text = Replace(text)
         try:
             t = parser_internal2text(parser_text2internal(text))
             for n, i in enumerate(t.split('\n')):
                 if sum(2 if unicodedata.east_asian_width(char) in 'FW' else 1 for char in i) >= 90:
-                    InfoBar.warning(
-                        title='WARNING!',
-                        content="第" + str(n + 1) + "行字符数量过多!\n请考虑换行!",
-                        orient=Qt.Horizontal,
-                        isClosable=True,
-                        position=InfoBarPosition.TOP,
-                        duration=2000,
-                        parent=self
-                    )
-            # TODO text protection
-            Cursor = self.plainTextEdit.textCursor()
-            P = Cursor.position()  # 获取光标位置
+                    self.info('warning', content="第" + str(n + 1) + "行字符数量过多!\n请考虑换行!")
+            # TODO text protection, Cursor auto move
+            if positionMark in t:
+                P = len(t.split(positionMark)[0])
+                L = len(t.split(positionMark)[0].split('\n'))
+                col = len(t.split(positionMark)[0].split('\n')[-1])
+                t = t.replace(positionMark, '')
+                self.text_ = t
+                self.status.setText('row:' + str(L) + '  col:' + str(col))
+            else:
+                t = self.text_.replace(positionMark, '')
+                self.info('warning', "DON'T DO IT AGAIN", '不要改动引导线')
             self.plainTextEdit.textChanged.disconnect(self.format)
             self.plainTextEdit.setPlainText(t)
             self.plainTextEdit.textChanged.connect(self.format)
-            if end == 0:
-                Cursor.setPosition(P)  # 光标归位
-            else:
-                Cursor.movePosition(QTextCursor.End)
+            #if end == 0:
+            #    Cursor.setPosition(P)  # 光标归位
+            #else:
+            #    Cursor.movePosition(QTextCursor.End)
+            Cursor.setPosition(P)  # 光标归位
             self.plainTextEdit.setTextCursor(Cursor)
             if time() - self.LST >= 10:
                 self.Save()
                 self.LST = time()
         except Exception as E:
-            InfoBar.error(
-                title='ERROR!',
-                content=str(E),
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=2000,
-                parent=self
-            )
+            self.info('error', 'ERROR!', str(E), 10000)
 
 
 if __name__ == '__main__':

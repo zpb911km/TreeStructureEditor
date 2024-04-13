@@ -1,9 +1,9 @@
 import unicodedata
 
 
-center = False
+center = True
 min_width = 5
-arrow = '►'
+arrow = '>'
 
 
 class Node():
@@ -75,13 +75,16 @@ def parser_tree2internal(tree_str: str) -> list[Node]:
 
 
 def parser_text2internal(text):
+    if len(text) <= 2:
+        text = '>' + text
+    text = text.replace('\t', '  ')
     if len(text.split('\n')) > 1:
         if text[0] in ['>', '\u200b', '▻', '►', '▹', '▸', '']:
             arrow = text[0]
         else:
             arrow = '►'
     else:
-        arrow = '►'
+        arrow = '>'
 
     def table_to_list(table_str: str, rows: int, cols: int) -> list[list[str]]:
         try:
@@ -128,8 +131,11 @@ def parser_text2internal(text):
             level = len(lines[i - 1].split(arrow, 1)[0]) // 2 + 1
             content = ''
         elif arrow not in line:
-            level = len(line) // 2 + 1
-            content = ''
+            for j in range(1, i):
+                if arrow in lines[i - j]:
+                    level = len(lines[i - j].split(arrow, 1)[0]) // 2 + 1
+                    break
+            content = line.split('─', 1)[-1]
         else:
             level = len(line.split(arrow, 1)[0]) // 2 + 1
             content = line.split(arrow, 1)[-1]
@@ -165,8 +171,8 @@ def parser_text2internal(text):
             node.level += 1
             node.content = node.content[1:]
         elif node.content.startswith('\\\\'):
+            node_list[node_list.index(node) - 1].content += node.content[2:]
             node_list.remove(node)
-            node.content = node.content[2:]
     return node_list
 
 
@@ -253,8 +259,7 @@ if __name__ == '__main__':
 │   ├─>│甲         │很长很长很长很长很长很长很长│？   │
 │   └─>└───────────┴────────────────────────────┴─────┘
 └─>Title
-  ├─>Subtitle
-  │ └─>Content'''
+  ├─>Subtitle'''
 
     node_list: list[Node] = [
         Node(1, 'ROOT'),
@@ -278,7 +283,7 @@ if __name__ == '__main__':
     └──────────┴────────────────────────────┴──┘'''
 
     # print('\n'.join('Node('+str(x.level)+', \''+x.content+'\'),' for x in parser_tree2internal(mixed_text)))
-    print('\n'.join('Node('+str(x.level)+', \''+x.content+'\'),' for x in parser_text2internal(mixed_text)))
+    # print('\n'.join('Node('+str(x.level)+', \''+x.content+'\'),' for x in parser_text2internal(mixed_text)))
 
     node_list: list[Node] = [
         Node(1, 'ROOT'),
@@ -294,4 +299,4 @@ if __name__ == '__main__':
     ]
     node_list = parser_text2internal(mixed_text)
 
-    print(parser_internal2text(node_list))
+    print(parser_internal2text(parser_text2internal(mixed_text)))
