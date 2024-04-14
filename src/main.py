@@ -159,6 +159,7 @@ class MainWindow(AcrylicWindow):
         self.count = 1
         self.plainTextEdit.textChanged.disconnect(self.format)
         self.plainTextEdit.setPlainText(text)
+        self.text_ = text
         self.plainTextEdit.textChanged.connect(self.format)
 
     def info(self, status: str, title='', content: str = '', delay: int = 2000):
@@ -228,8 +229,11 @@ class MainWindow(AcrylicWindow):
             for n, i in enumerate(t.split('\n')):
                 if sum(2 if unicodedata.east_asian_width(char) in 'FW' else 1 for char in i) >= 90:
                     self.info('warning', content="第" + str(n + 1) + "行字符数量过多!\n请考虑换行!")
-            # TODO text protection, Cursor auto move
-            if positionMark in t:
+            check_text = t.split(positionMark)[1].split('\n')[0]
+            if positionMark in t and '─>' in check_text:
+                t = self.text_.replace(positionMark, '')
+                self.info('warning', "DON'T DO IT AGAIN", '不要改动引导线')
+            elif positionMark in t:
                 P = len(t.split(positionMark)[0])
                 L = len(t.split(positionMark)[0].split('\n'))
                 col = len(t.split(positionMark)[0].split('\n')[-1])
@@ -248,7 +252,7 @@ class MainWindow(AcrylicWindow):
             #    Cursor.movePosition(QTextCursor.End)
             Cursor.setPosition(P)  # 光标归位
             self.plainTextEdit.setTextCursor(Cursor)
-            if time() - self.LST >= 10:
+            if time() - self.LST >= 30:
                 self.Save()
                 self.LST = time()
         except Exception as E:
