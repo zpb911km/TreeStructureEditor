@@ -15,10 +15,10 @@ import unicodedata
 def Replace(text):
     rpl = []
     try:
-        open('E:\\myfiles\\python\\TreeStructureEditor\\resource\\replace_sheet.txt', 'r', encoding='UTF-8')
+        open('.\\resource\\replace_sheet.txt', 'r', encoding='UTF-8')
     except FileNotFoundError:
         return text
-    with open('E:\\myfiles\\python\\TreeStructureEditor\\resource\\replace_sheet.txt', 'r', encoding='UTF-8') as sheet:
+    with open('.\\resource\\replace_sheet.txt', 'r', encoding='UTF-8') as sheet:
         lines = sheet.read().split('\n')
         for line in lines:
             if len(line) == 0:
@@ -72,7 +72,6 @@ class MainWindow(AcrylicWindow):
     def setupUI(self):
         self.resize(1000, 600)
         setTheme(Theme.DARK)
-        self.setWindowIcon(QIcon("E:\\myfiles\\python\\TreeStructureEditor\\resource\\symbol1.png"))
         self.setTitleBar(FluentTitleBar(self))
         # self.windowEffect.setAeroEffect(self.winId())
         self.windowEffect.setAcrylicEffect(self.winId(), '00102030')
@@ -98,6 +97,7 @@ class MainWindow(AcrylicWindow):
         self.status.setStyleSheet('QLabel{color:#70ffffff;}')
         self.verticalLayout.addWidget(self.status)
         self.plainTextEdit.textChanged.connect(self.format)
+        self.setWindowIcon(QIcon(".\\resource\\symbol1.png"))
         self.setWindowTitle("TreeStructureEditor V0.2.0")
 
     def undo(self):
