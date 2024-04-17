@@ -70,7 +70,7 @@ class MainWindow(AcrylicWindow):
         self.text_ = ''
 
     def setupUI(self):
-        self.resize(700, 600)
+        self.resize(1000, 600)
         setTheme(Theme.DARK)
         self.setWindowIcon(QIcon("E:\\myfiles\\python\\TreeStructureEditor\\resource\\symbol1.png"))
         self.setTitleBar(FluentTitleBar(self))
@@ -85,6 +85,7 @@ class MainWindow(AcrylicWindow):
         self.CommandBar.addAction(Action(FluentIcon.SAVE, 'Save', triggered=self.Save, shortcut='Ctrl+S'))
         self.CommandBar.addSeparator()
         self.CommandBar.addAction(Action(FluentIcon.SYNC, 'Refresh', triggered=self.format, shortcut='F5'))
+        self.CommandBar.addAction(Action(FluentIcon.HISTORY, 'Undo', triggered=self.undo, shortcut='Ctrl+Z'))
         self.CommandBar.addAction(Action(FluentIcon.PRINT, 'Print', triggered=self.PrintPDF, shortcut='Ctrl+P'))
         self.CommandBar.addAction(Action(FluentIcon.FONT, 'Font', triggered=self.changeFont))
         self.CommandBar.addAction(Action(FluentIcon.FONT_SIZE, 'Font Size', triggered=self.setFontSize))
@@ -98,6 +99,11 @@ class MainWindow(AcrylicWindow):
         self.verticalLayout.addWidget(self.status)
         self.plainTextEdit.textChanged.connect(self.format)
         self.setWindowTitle("TreeStructureEditor V0.2.0")
+
+    def undo(self):
+        self.plainTextEdit.textChanged.disconnect(self.format)
+        self.plainTextEdit.setPlainText(self.text_)
+        self.plainTextEdit.textChanged.connect(self.format)
 
     def PrintPDF(self):
         text = Replace(self.plainTextEdit.toPlainText())
@@ -229,17 +235,17 @@ class MainWindow(AcrylicWindow):
             for n, i in enumerate(t.split('\n')):
                 if sum(2 if unicodedata.east_asian_width(char) in 'FW' else 1 for char in i) >= 90:
                     self.info('warning', content="第" + str(n + 1) + "行字符数量过多!\n请考虑换行!")
-            check_text = t.split(positionMark)[1].split('\n')[0]
-            if positionMark in t and '─>' in check_text:
-                t = self.text_.replace(positionMark, '')
-                self.info('warning', "DON'T DO IT AGAIN", '不要改动引导线')
-            elif positionMark in t:
-                P = len(t.split(positionMark)[0])
-                L = len(t.split(positionMark)[0].split('\n'))
-                col = len(t.split(positionMark)[0].split('\n')[-1])
-                t = t.replace(positionMark, '')
-                self.text_ = t
-                self.status.setText('row:' + str(L) + '  col:' + str(col))
+            if positionMark in t:
+                if '─>' in t.split(positionMark)[1].split('\n')[0]:
+                    t = self.text_.replace(positionMark, '')
+                    self.info('warning', "DON'T DO IT AGAIN", '不要改动引导线')
+                else:
+                    P = len(t.split(positionMark)[0])
+                    L = len(t.split(positionMark)[0].split('\n'))
+                    col = len(t.split(positionMark)[0].split('\n')[-1])
+                    t = t.replace(positionMark, '')
+                    self.text_ = t
+                    self.status.setText('row:' + str(L) + '  col:' + str(col))
             else:
                 t = self.text_.replace(positionMark, '')
                 self.info('warning', "DON'T DO IT AGAIN", '不要改动引导线')
