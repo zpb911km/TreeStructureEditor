@@ -10,6 +10,11 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 import unicodedata
+import os
+
+
+# switch path, you can delete this when you run.
+os.chdir('e:/myfiles/python/TreeStructureEditor')
 
 
 def Replace(text):
