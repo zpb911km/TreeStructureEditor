@@ -23,6 +23,7 @@ def parser_internal2tree(nodes: list[Node]) -> str:
         str: specified tree structure str
     '''
     prefix = ['├─', '└─', '│ ', '  ']
+    #prefix = [b'\033[31m'.decode() + '├─' + b'\033[37m'.decode(), b'\033[32m'.decode() + '└─' + b'\033[37m'.decode(), b'\033[36m'.decode() + '│ ' + b'\033[37m'.decode(), b'\033[34m'.decode() + '  ' + b'\033[37m'.decode()]
     prefix_list = []
     for node in nodes:
         line_prefix = [3] * (node.level - 1)

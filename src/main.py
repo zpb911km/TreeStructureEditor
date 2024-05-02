@@ -99,7 +99,7 @@ class MainWindow(AcrylicWindow):
         self.plainTextEdit.setLineWrapMode(PlainTextEdit.NoWrap)
         self.verticalLayout.addWidget(self.plainTextEdit)
         self.status = label.QLabel()
-        self.status.setStyleSheet('QLabel{color:#70ffffff;}')
+        self.status.setStyleSheet('QLabel{color:#80ffffff;}')
         self.verticalLayout.addWidget(self.status)
         self.plainTextEdit.textChanged.connect(self.format)
         self.setWindowIcon(QIcon(".\\resource\\symbol1.png"))
@@ -250,7 +250,7 @@ class MainWindow(AcrylicWindow):
                     col = len(t.split(positionMark)[0].split('\n')[-1])
                     t = t.replace(positionMark, '')
                     self.text_ = t
-                    self.status.setText('row:' + str(L) + '  col:' + str(col))
+                    self.status.setText('row:' + str(L) + '  col:' + str(col) + ' sum:' + str(P))
             else:
                 t = self.text_.replace(positionMark, '')
                 self.info('warning', "DON'T DO IT AGAIN", '不要改动引导线')
