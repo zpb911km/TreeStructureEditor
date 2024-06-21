@@ -115,7 +115,7 @@ class MainWindow(AcrylicWindow):
         PATH, _ = QFileDialog.getSaveFileName(
             self,
             "保存",
-            "E:\\Nutstore\\总结梳理",
+            "E:\ServerSyncFiles",
             "PDF文件 (*.pdf)")
         if PATH != '':
             with open(PATH, 'w', encoding='UTF-8') as file:
@@ -154,7 +154,7 @@ class MainWindow(AcrylicWindow):
         self.PATH, _ = QFileDialog.getOpenFileName(
             self,
             '打开',
-            "E:\\Nutstore\\总结梳理",
+            "E:\ServerSyncFiles",
             "文本文件 (*.zpb *.txt)")
         if self.PATH == '':
             self.info('error', 'error', 'Invalid Path!')
@@ -213,7 +213,7 @@ class MainWindow(AcrylicWindow):
             self.PATH, _ = QFileDialog.getSaveFileName(
                 self,
                 "保存",
-                "E:\\Nutstore\\总结梳理",
+                "E:\ServerSyncFiles",
                 "文本文件 (*.zpb)")
             if self.PATH != '':
                 with open(self.PATH, 'w', encoding='UTF-8') as file:
