@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon, QFont, QTextCursor
+from PySide6.QtGui import QIcon, QFont  # , QTextCursor
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QFileDialog, QFontComboBox
 from qfluentwidgets import FluentTitleBar, label, CommandBar, Action, PlainTextEdit, SpinBox, InfoBar, setTheme, Theme, FluentIcon, InfoBarPosition, MessageBoxBase, SubtitleLabel
 from qframelesswindow import AcrylicWindow
@@ -11,19 +11,27 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 import unicodedata
 import os
+import sys
+sys.path.append('module_path')
 
 
 # switch path, you can delete this when you run.
-os.chdir('e:/myfiles/python/TreeStructureEditor')
+if sys.platform.startswith('win'):
+    os.chdir('e:/myfiles/python/TreeStructureEditor')
+    tree_PATH = "E:\ServerSyncFiles"
+elif sys.platform.startswith('linux'):
+    os.chdir('/media/zpb/重要数据/myfiles/python/TreeStructureEditor')
+    tree_PATH = '/home/zpb/sync'
 
 
 def Replace(text):
     rpl = []
     try:
-        open('.\\resource\\replace_sheet.txt', 'r', encoding='UTF-8')
+        open('./resource/replace_sheet.txt', 'r', encoding='UTF-8')
     except FileNotFoundError:
+        print(os.system('pwd & ls -al'))
         return text
-    with open('.\\resource\\replace_sheet.txt', 'r', encoding='UTF-8') as sheet:
+    with open('./resource/replace_sheet.txt', 'r', encoding='UTF-8') as sheet:
         lines = sheet.read().split('\n')
         for line in lines:
             if len(line) == 0:
@@ -102,7 +110,7 @@ class MainWindow(AcrylicWindow):
         self.status.setStyleSheet('QLabel{color:#80ffffff;}')
         self.verticalLayout.addWidget(self.status)
         self.plainTextEdit.textChanged.connect(self.format)
-        self.setWindowIcon(QIcon(".\\resource\\symbol1.png"))
+        self.setWindowIcon(QIcon("./resource/symbol1.png"))
         self.setWindowTitle("TreeStructureEditor V0.2.0")
 
     def undo(self):
@@ -115,7 +123,7 @@ class MainWindow(AcrylicWindow):
         PATH, _ = QFileDialog.getSaveFileName(
             self,
             "保存",
-            "E:\ServerSyncFiles",
+            tree_PATH,
             "PDF文件 (*.pdf)")
         if PATH != '':
             with open(PATH, 'w', encoding='UTF-8') as file:
@@ -154,7 +162,7 @@ class MainWindow(AcrylicWindow):
         self.PATH, _ = QFileDialog.getOpenFileName(
             self,
             '打开',
-            "E:\ServerSyncFiles",
+            tree_PATH,
             "文本文件 (*.zpb *.txt)")
         if self.PATH == '':
             self.info('error', 'error', 'Invalid Path!')
@@ -213,7 +221,7 @@ class MainWindow(AcrylicWindow):
             self.PATH, _ = QFileDialog.getSaveFileName(
                 self,
                 "保存",
-                "E:\ServerSyncFiles",
+                tree_PATH,
                 "文本文件 (*.zpb)")
             if self.PATH != '':
                 with open(self.PATH, 'w', encoding='UTF-8') as file:
