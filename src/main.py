@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon, QFont  # , QTextCursor
+from PySide6.QtGui import QIcon, QFont, QContextMenuEvent, QKeySequence, QShortcut  # , QTextCursor
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QFileDialog, QFontComboBox
-from qfluentwidgets import FluentTitleBar, label, CommandBar, Action, PlainTextEdit, SpinBox, InfoBar, setTheme, Theme, FluentIcon, InfoBarPosition, MessageBoxBase, SubtitleLabel
+from qfluentwidgets import FluentTitleBar, label, CommandBar, Action, PlainTextEdit, RoundMenu, SpinBox, InfoBar, setTheme, Theme, FluentIcon, InfoBarPosition, MessageBoxBase, SubtitleLabel
 from qframelesswindow import AcrylicWindow
 from time import time
 from core import parser_internal2text, parser_text2internal
@@ -18,7 +18,7 @@ sys.path.append('module_path')
 # switch path, you can delete this when you run.
 if sys.platform.startswith('win'):
     os.chdir('e:/myfiles/python/TreeStructureEditor')
-    tree_PATH = "E:\ServerSyncFiles"
+    tree_PATH = "E:\\ServerSyncFiles"
 elif sys.platform.startswith('linux'):
     os.chdir('/media/zpb/重要数据/myfiles/python/TreeStructureEditor')
     tree_PATH = '/home/zpb/sync'
@@ -74,13 +74,32 @@ class FontMessageBox(MessageBoxBase):
         self.widget.setMinimumWidth(350)
 
 
+class textEdit(PlainTextEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.__parent__ = parent
+        undoShortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
+        undoShortcut.activated.connect(self.undo)
+
+    def keyPressEvent(self, event):
+        # 过滤快捷键
+        if event.key() == Qt.Key_Z and event.modifiers() == Qt.ControlModifier:
+            self.undo()  # 处理 Ctrl+Z
+        else:
+            # 对其他按键调用基类方法
+            super().keyPressEvent(event)
+
+    def undo(self):
+        self.__parent__.undo()
+
+
 class MainWindow(AcrylicWindow):
     def __init__(self):
         super().__init__()
         self.setupUI()
         self.count = 0
         self.LST = time()
-        self.text_ = ''
+        self.text_ = []  # [[cursor_pos, text], [cursor_pos, text]]
 
     def setupUI(self):
         self.resize(1000, 600)
@@ -102,20 +121,67 @@ class MainWindow(AcrylicWindow):
         self.CommandBar.addAction(Action(FluentIcon.FONT, 'Font', triggered=self.changeFont))
         self.CommandBar.addAction(Action(FluentIcon.FONT_SIZE, 'Font Size', triggered=self.setFontSize))
         self.verticalLayout.addWidget(self.CommandBar, 0)
-        self.plainTextEdit = PlainTextEdit(self)
+        self.plainTextEdit = textEdit(self)
         self.plainTextEdit.setFont(QFont(['Unifont'], 16))
         self.plainTextEdit.setLineWrapMode(PlainTextEdit.NoWrap)
+        self.plainTextEdit.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.plainTextEdit.customContextMenuRequested.connect(self.showContextMenu)
         self.verticalLayout.addWidget(self.plainTextEdit)
         self.status = label.QLabel()
         self.status.setStyleSheet('QLabel{color:#80ffffff;}')
         self.verticalLayout.addWidget(self.status)
         self.plainTextEdit.textChanged.connect(self.format)
+        # 添加动作
+        self.copyAction = Action(FluentIcon.COPY, "复制", checkable=False)
+        self.cutAction = Action(FluentIcon.CUT, "剪切", checkable=False)
+        self.pasteAction = Action(FluentIcon.PASTE, "粘贴", checkable=False)
+        self.pastePlainTextAction = Action(FluentIcon.PASTE, "纯文本粘贴", checkable=False)
+        pastePlainTextActionShortcut = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
+        pastePlainTextActionShortcut.activated.connect(lambda: self.plainTextEdit.insertPlainText(QApplication.clipboard().text().replace('\n', '')))
+        undoShortcut = QShortcut(QKeySequence("Ctrl+Shift+Z"), self)
+        undoShortcut.activated.connect(self.undo)
+        self.undoAction = Action(FluentIcon.HISTORY, "撤销", checkable=False)
+        # 连接动作的触发信号
+        self.copyAction.triggered.connect(self.plainTextEdit.copy)
+        self.cutAction.triggered.connect(self.plainTextEdit.cut)
+        self.pasteAction.triggered.connect(self.plainTextEdit.paste)
+        self.pastePlainTextAction.triggered.connect(lambda: self.plainTextEdit.insertPlainText(QApplication.clipboard().text().replace('\n', '')))
+        self.undoAction.triggered.connect(self.undo)
         self.setWindowIcon(QIcon("./resource/symbol1.png"))
         self.setWindowTitle("TreeStructureEditor V0.2.0")
 
+    def contextMenuEvent(self, event: QContextMenuEvent):
+        # 当右键菜单事件发生时，调用 showContextMenu
+        self.showContextMenu(event.globalPos())
+
+    def showContextMenu(self, pos):
+        # 创建 CheckableMenu，并设置父对象
+        # menu = CheckableMenu(parent=self)
+        menu = RoundMenu(parent=self)
+
+        # 将动作添加到菜单
+        menu.addAction(self.copyAction)
+        menu.addAction(self.cutAction)
+        menu.addAction(self.pasteAction)
+        menu.addAction(self.pastePlainTextAction)
+        menu.addAction(self.undoAction)
+
+        # 显示菜单
+        menu.exec(self.plainTextEdit.mapToGlobal(pos))
+
     def undo(self):
-        self.plainTextEdit.textChanged.disconnect(self.format)
-        self.plainTextEdit.setPlainText(self.text_)
+        try:
+            self.plainTextEdit.textChanged.disconnect(self.format)
+        except Exception:
+            pass
+        try:
+            self.plainTextEdit.setPlainText(self.text_[-2][1])
+            c = self.plainTextEdit.textCursor()
+            c.setPosition(self.text_[-2][0])
+            self.plainTextEdit.setTextCursor(c)
+            self.text_ = self.text_[:-1]
+        except Exception:
+            self.info('warning', 'warning', 'Nothing to undo!', 2000)
         self.plainTextEdit.textChanged.connect(self.format)
 
     def PrintPDF(self):
@@ -178,7 +244,7 @@ class MainWindow(AcrylicWindow):
         self.count = 1
         self.plainTextEdit.textChanged.disconnect(self.format)
         self.plainTextEdit.setPlainText(text)
-        self.text_ = text
+        self.text_.append([self.plainTextEdit.textCursor().position(), text])
         self.plainTextEdit.textChanged.connect(self.format)
 
     def info(self, status: str, title='', content: str = '', delay: int = 2000):
@@ -250,25 +316,27 @@ class MainWindow(AcrylicWindow):
                     self.info('warning', content="第" + str(n + 1) + "行字符数量过多!\n请考虑换行!")
             if positionMark in t:
                 if '─>' in t.split(positionMark)[1].split('\n')[0]:
-                    t = self.text_.replace(positionMark, '')
+                    t = self.text_[-1][1].replace(positionMark, '')
                     self.info('warning', "DON'T DO IT AGAIN", '不要改动引导线')
                 else:
                     P = len(t.split(positionMark)[0])
                     L = len(t.split(positionMark)[0].split('\n'))
                     col = len(t.split(positionMark)[0].split('\n')[-1])
                     t = t.replace(positionMark, '')
-                    self.text_ = t
+                    self.text_.append([P, t])
+                    while len(self.text_) > 30:
+                        self.text_ = self.text_[1:]
                     self.status.setText('row:' + str(L) + '  col:' + str(col) + ' sum:' + str(P))
             else:
-                t = self.text_.replace(positionMark, '')
+                t = self.text_[-1][1].replace(positionMark, '')
                 self.info('warning', "DON'T DO IT AGAIN", '不要改动引导线')
             self.plainTextEdit.textChanged.disconnect(self.format)
             self.plainTextEdit.setPlainText(t)
             self.plainTextEdit.textChanged.connect(self.format)
-            #if end == 0:
-            #    Cursor.setPosition(P)  # 光标归位
-            #else:
-            #    Cursor.movePosition(QTextCursor.End)
+            # if end == 0:
+            #     Cursor.setPosition(P)  # 光标归位
+            # else:
+            #     Cursor.movePosition(QTextCursor.End)
             Cursor.setPosition(P)  # 光标归位
             self.plainTextEdit.setTextCursor(Cursor)
             if time() - self.LST >= 30:
