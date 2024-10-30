@@ -13,6 +13,7 @@ import unicodedata
 import os
 import sys
 sys.path.append('module_path')
+EDGE_LINE_NUM = 3  # 边缘显示的行数
 
 
 # switch path, you can delete this when you run.
@@ -80,6 +81,28 @@ class textEdit(PlainTextEdit):
         self.__parent__ = parent
         undoShortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
         undoShortcut.activated.connect(self.undo)
+        self.cursorPositionChanged.connect(self.moveCursor)
+        self.textChanged.connect(self.moveCursor)
+
+    def moveCursor(self):
+        cursor = self.textCursor()
+        cursor_rect = self.cursorRect(cursor)
+        viewport_rect = self.viewport().rect()
+        line_height = self.fontMetrics().lineSpacing()  # 获取行高
+
+        # 判断光标距离顶部和底部的距离
+        distance_to_top = cursor_rect.top() - viewport_rect.top()
+        distance_to_bottom = viewport_rect.bottom() - cursor_rect.bottom()
+        print(distance_to_top, distance_to_bottom)
+        print(self.verticalScrollBar().value())
+
+        # 如果光标距离顶部不足3行，则滚动到顶部
+        if distance_to_top < EDGE_LINE_NUM * line_height:
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - EDGE_LINE_NUM)
+
+        # 如果光标距离底部不足3行，则滚动到底部
+        elif distance_to_bottom < EDGE_LINE_NUM * line_height:
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() + EDGE_LINE_NUM)
 
     def keyPressEvent(self, event):
         # 过滤快捷键
@@ -138,8 +161,10 @@ class MainWindow(AcrylicWindow):
         self.pastePlainTextAction = Action(FluentIcon.PASTE, "纯文本粘贴", checkable=False)
         pastePlainTextActionShortcut = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
         pastePlainTextActionShortcut.activated.connect(lambda: self.plainTextEdit.insertPlainText(QApplication.clipboard().text().replace('\n', '')))
-        undoShortcut = QShortcut(QKeySequence("Ctrl+Shift+Z"), self)
-        undoShortcut.activated.connect(self.undo)
+        addIndentShortcut = QShortcut(QKeySequence("Ctrl+]"), self)
+        addIndentShortcut.activated.connect(self.add_indent)
+        removeIndentShortcut = QShortcut(QKeySequence("Ctrl+["), self)
+        removeIndentShortcut.activated.connect(self.remove_indent)
         self.undoAction = Action(FluentIcon.HISTORY, "撤销", checkable=False)
         # 连接动作的触发信号
         self.copyAction.triggered.connect(self.plainTextEdit.copy)
@@ -149,6 +174,38 @@ class MainWindow(AcrylicWindow):
         self.undoAction.triggered.connect(self.undo)
         self.setWindowIcon(QIcon("./resource/symbol1.png"))
         self.setWindowTitle("TreeStructureEditor V0.2.0")
+
+    def add_indent(self):
+        try:
+            self.plainTextEdit.textChanged.disconnect(self.format)
+        except Exception:
+            pass
+        cursor = self.plainTextEdit.textCursor()
+        if cursor.hasSelection():
+            text = cursor.selectedText()
+            cursor.removeSelectedText()
+            text = text.replace('─>', '─>>')
+            cursor.insertText(text)
+        else:
+            self.info('warning', 'warning', 'Please select text first!', 2000)
+        self.plainTextEdit.textChanged.connect(self.format)
+        self.format()
+
+    def remove_indent(self):
+        try:
+            self.plainTextEdit.textChanged.disconnect(self.format)
+        except Exception:
+            pass
+        cursor = self.plainTextEdit.textCursor()
+        if cursor.hasSelection():
+            text = cursor.selectedText()
+            cursor.removeSelectedText()
+            text = text.replace('─>', '─><')
+            cursor.insertText(text)
+        else:
+            self.info('warning', 'warning', 'Please select text first!', 2000)
+        self.plainTextEdit.textChanged.connect(self.format)
+        self.format()
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         # 当右键菜单事件发生时，调用 showContextMenu
