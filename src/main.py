@@ -95,11 +95,11 @@ class textEdit(PlainTextEdit):
 
         # 如果光标距离顶部不足3行，则滚动到顶部
         if distance_to_top < EDGE_LINE_NUM * line_height:
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - EDGE_LINE_NUM)
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - 1)
 
         # 如果光标距离底部不足3行，则滚动到底部
         elif distance_to_bottom < EDGE_LINE_NUM * line_height:
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() + EDGE_LINE_NUM)
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() + 1)
 
     def keyPressEvent(self, event):
         # 过滤快捷键
