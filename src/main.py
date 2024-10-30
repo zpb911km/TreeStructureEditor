@@ -82,7 +82,6 @@ class textEdit(PlainTextEdit):
         undoShortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
         undoShortcut.activated.connect(self.undo)
         self.cursorPositionChanged.connect(self.moveCursor)
-        self.textChanged.connect(self.moveCursor)
 
     def moveCursor(self):
         cursor = self.textCursor()
@@ -93,8 +92,6 @@ class textEdit(PlainTextEdit):
         # 判断光标距离顶部和底部的距离
         distance_to_top = cursor_rect.top() - viewport_rect.top()
         distance_to_bottom = viewport_rect.bottom() - cursor_rect.bottom()
-        print(distance_to_top, distance_to_bottom)
-        print(self.verticalScrollBar().value())
 
         # 如果光标距离顶部不足3行，则滚动到顶部
         if distance_to_top < EDGE_LINE_NUM * line_height:
@@ -363,6 +360,7 @@ class MainWindow(AcrylicWindow):
         text = self.plainTextEdit.toPlainText()
         Cursor = self.plainTextEdit.textCursor()
         P = Cursor.position()  # 获取光标位置, type: int
+        S = self.plainTextEdit.verticalScrollBar().value()
         positionMark = '🥟'
         text = text[:P] + positionMark + text[P:]
         text = Replace(text)
@@ -396,6 +394,7 @@ class MainWindow(AcrylicWindow):
             #     Cursor.movePosition(QTextCursor.End)
             Cursor.setPosition(P)  # 光标归位
             self.plainTextEdit.setTextCursor(Cursor)
+            self.plainTextEdit.verticalScrollBar().setValue(S)  # 滚动条归位
             if time() - self.LST >= 30:
                 self.Save()
                 self.LST = time()
