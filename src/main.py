@@ -252,7 +252,7 @@ class MainWindow(AcrylicWindow):
             return None
         contentl = text.split("\n")
         c = canvas.Canvas(PATH, pagesize=A4)
-        pdfmetrics.registerFont(TTFont("Unifont", "Unifont.ttf"))
+        pdfmetrics.registerFont(TTFont("Unifont", "./resource/unifont.ttf"))
         c.setFont("Unifont", 12)
         y = 785
         for s in contentl:
