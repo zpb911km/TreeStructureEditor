@@ -64,6 +64,34 @@
         display: block;
         margin: 0.2rem 0;
       }
+      
+      /* 响应式下拉菜单样式 */
+      .dropdown-content {
+        min-width: 120px;
+      }
+      
+      /* 在小屏幕上的节点样式调整 */
+      @media (max-width: 767px) {
+        .node-container {
+          padding: 0.5rem !important;
+        }
+        
+        .tree-node {
+          flex-direction: column !important;
+          align-items: flex-start !important;
+        }
+        
+        .node-content {
+          width: 100% !important;
+          margin-bottom: 0.5rem !important;
+        }
+        
+        .node-actions {
+          width: 100% !important;
+          display: flex !important;
+          justify-content: flex-end !important;
+        }
+      }
     </style>
   </head>
   <body class="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-6">
@@ -176,6 +204,9 @@
         onUpdate,
         onDelete,
         onAddChild,
+        onMove,
+        parentChildren,
+        nodeIndex,
         level = 0,
       }) => {
         const [isEditing, setIsEditing] = React.useState(false);
@@ -183,9 +214,28 @@
           node.content || ""
         );
         const [expanded, setExpanded] = React.useState(true);
+        const [isMobile, setIsMobile] = React.useState(false);
 
         const nodeRef = React.useRef(null);
         const textareaRef = React.useRef(null);
+
+        // 监听窗口大小变化
+        React.useEffect(() => {
+          const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+          };
+
+          // 初始检查
+          checkMobile();
+
+          // 添加事件监听器
+          window.addEventListener('resize', checkMobile);
+
+          // 清理事件监听器
+          return () => {
+            window.removeEventListener('resize', checkMobile);
+          };
+        }, []);
 
         // 更新本地内容当 prop 变化时
         React.useEffect(() => {
@@ -224,13 +274,16 @@
           return React.createElement(
             "ul",
             { className: "ml-2 pl-0  border-dashed border-blue-200" },
-            node.children.map((child) =>
+            node.children.map((child, index) =>
               React.createElement(TreeNode, {
                 key: child.id,
                 node: child,
                 onUpdate: onUpdate,
                 onDelete: onDelete,
                 onAddChild: onAddChild,
+                onMove: onMove,
+                parentChildren: node.children,
+                nodeIndex: index,
                 level: level + 1,
               })
             )
@@ -338,72 +391,276 @@
               React.createElement(
                 "div",
                 { className: "flex space-x-2 ml-1" },
-                node.type === "branch" &&
-                  React.createElement(
-                    "div",
-                    { className: "flex space-x-1" },
-                    React.createElement(
-                      "button",
-                      {
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          handleAddBranch();
+                
+                // 响应式操作按钮，根据屏幕宽度决定显示方式
+                isMobile
+                  ? React.createElement(
+                      "div",
+                      { className: "relative" },
+                      React.createElement(
+                        "button",
+                        {
+                          className:
+                            "px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200",
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            // 切换下拉菜单
+                            const dropdown = e.target.parentElement.querySelector('.dropdown-content');
+                            if (dropdown) {
+                              dropdown.classList.toggle('hidden');
+                            }
+                          }
                         },
-                        className:
-                          "px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200",
-                      },
-                      "+ Branch"
-                    ),
-                    React.createElement(
-                      "button",
-                      {
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          handleAddLeaf();
+                        "⋯" // 操作菜单图标
+                      ),
+                      // 下拉菜单内容
+                      React.createElement(
+                        "div",
+                        {
+                          className: "dropdown-content absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10 hidden"
                         },
-                        className:
-                          "px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200",
-                      },
-                      "+ Leaf"
+                        // 移动按钮
+                        React.createElement(
+                          "div",
+                          { className: "py-1" },
+                          (nodeIndex > 0) && React.createElement(
+                            "button",
+                            {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                onMove(node.id, "up");
+                                // 隐藏下拉菜单
+                                const dropdown = e.target.closest('.dropdown-content');
+                                if (dropdown) {
+                                  dropdown.classList.add('hidden');
+                                }
+                              },
+                              className:
+                                "w-full text-left px-3 py-1 text-xs hover:bg-gray-100",
+                              disabled: nodeIndex <= 0
+                            },
+                            "↑ 上移"
+                          ),
+                          (parentChildren && nodeIndex < parentChildren.length - 1) && React.createElement(
+                            "button",
+                            {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                onMove(node.id, "down");
+                                // 隐藏下拉菜单
+                                const dropdown = e.target.closest('.dropdown-content');
+                                if (dropdown) {
+                                  dropdown.classList.add('hidden');
+                                }
+                              },
+                              className:
+                                "w-full text-left px-3 py-1 text-xs hover:bg-gray-100",
+                              disabled: !parentChildren || nodeIndex >= parentChildren.length - 1
+                            },
+                            "↓ 下移"
+                          )
+                        ),
+                        // 分隔线
+                        React.createElement("div", { className: "border-t border-gray-200 my-1" }),
+                        // 添加子节点按钮
+                        node.type === "branch" && React.createElement(
+                          "div",
+                          { className: "py-1" },
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                handleAddBranch();
+                                // 隐藏下拉菜单
+                                const dropdown = e.target.closest('.dropdown-content');
+                                if (dropdown) {
+                                  dropdown.classList.add('hidden');
+                                }
+                              },
+                              className:
+                                "w-full text-left px-3 py-1 text-xs hover:bg-gray-100"
+                            },
+                            "+ Branch"
+                          ),
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                handleAddLeaf();
+                                // 隐藏下拉菜单
+                                const dropdown = e.target.closest('.dropdown-content');
+                                if (dropdown) {
+                                  dropdown.classList.add('hidden');
+                                }
+                              },
+                              className:
+                                "w-full text-left px-3 py-1 text-xs hover:bg-gray-100"
+                            },
+                            "+ Leaf"
+                          )
+                        ),
+                        // 分隔线
+                        node.type === "leaf" && React.createElement("div", { className: "border-t border-gray-200 my-1" }),
+                        // 叶子节点编辑按钮
+                        node.type === "leaf" && React.createElement(
+                          "div",
+                          { className: "py-1" },
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                const newEditingState = !isEditing;
+                                setIsEditing(newEditingState);
+                                // 隐藏下拉菜单
+                                const dropdown = e.target.closest('.dropdown-content');
+                                if (dropdown) {
+                                  dropdown.classList.add('hidden');
+                                }
+                                // 如果切换到编辑状态，设置焦点
+                                if (newEditingState && textareaRef.current) {
+                                  setTimeout(() => {
+                                    textareaRef.current.focus();
+                                  }, 0);
+                                }
+                              },
+                              className: `w-full text-left px-3 py-1 text-xs hover:bg-gray-100`
+                            },
+                            isEditing ? "Preview" : "Edit"
+                          )
+                        ),
+                        // 分隔线
+                        React.createElement("div", { className: "border-t border-gray-200 my-1" }),
+                        // 删除按钮
+                        React.createElement(
+                          "div",
+                          { className: "py-1" },
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                onDelete(node.id);
+                                // 隐藏下拉菜单
+                                const dropdown = e.target.closest('.dropdown-content');
+                                if (dropdown) {
+                                  dropdown.classList.add('hidden');
+                                }
+                              },
+                              className:
+                                "w-full text-left px-3 py-1 text-xs text-red-600 hover:bg-red-50"
+                            },
+                            "Delete"
+                          )
+                        )
+                      )
                     )
-                  ),
+                  : React.createElement(
+                      "div",
+                      { className: "flex space-x-2" },
+                      // 移动按钮
+                      React.createElement(
+                        "div",
+                        { className: "flex space-x-1" },
+                        // 上移按钮
+                        (nodeIndex > 0) && React.createElement(
+                          "button",
+                          {
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              onMove(node.id, "up");
+                            },
+                            className:
+                              "px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50",
+                            disabled: nodeIndex <= 0
+                          },
+                          "↑"
+                        ),
+                        // 下移按钮
+                        (parentChildren && nodeIndex < parentChildren.length - 1) && React.createElement(
+                          "button",
+                          {
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              onMove(node.id, "down");
+                            },
+                            className:
+                              "px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50",
+                            disabled: !parentChildren || nodeIndex >= parentChildren.length - 1
+                          },
+                          "↓"
+                        )
+                      ),
 
-                node.type === "leaf" &&
-                  React.createElement(
-                    "button",
-                    {
-                      onClick: (e) => {
-                        e.stopPropagation();
-                        const newEditingState = !isEditing;
-                        setIsEditing(newEditingState);
-                        // 如果切换到编辑状态，设置焦点
-                        if (newEditingState && textareaRef.current) {
-                          setTimeout(() => {
-                            textareaRef.current.focus();
-                          }, 0);
-                        }
-                      },
-                      className: `px-2 py-1 text-xs rounded ${
-                        isEditing
-                          ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                          : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
-                      }`,
-                    },
-                    isEditing ? "Preview" : "Edit"
-                  ),
+                      node.type === "branch" &&
+                        React.createElement(
+                          "div",
+                          { className: "flex space-x-1" },
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                handleAddBranch();
+                              },
+                              className:
+                                "px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200",
+                            },
+                            "+ Branch"
+                          ),
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                handleAddLeaf();
+                              },
+                              className:
+                                "px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200",
+                            },
+                            "+ Leaf"
+                          )
+                        ),
 
-                React.createElement(
-                  "button",
-                  {
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      onDelete(node.id);
-                    },
-                    className:
-                      "px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200",
-                  },
-                  "Delete"
-                )
+                      node.type === "leaf" &&
+                        React.createElement(
+                          "button",
+                          {
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              const newEditingState = !isEditing;
+                              setIsEditing(newEditingState);
+                              // 如果切换到编辑状态，设置焦点
+                              if (newEditingState && textareaRef.current) {
+                                setTimeout(() => {
+                                  textareaRef.current.focus();
+                                }, 0);
+                              }
+                            },
+                            className: `px-2 py-1 text-xs rounded ${
+                              isEditing
+                                ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                                : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                            }`,
+                          },
+                          isEditing ? "Preview" : "Edit"
+                        ),
+
+                      React.createElement(
+                        "button",
+                        {
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            onDelete(node.id);
+                          },
+                          className:
+                            "px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200",
+                        },
+                        "Delete"
+                      )
+                    )
               )
             ),
 
@@ -516,6 +773,72 @@
           };
 
           setTree(addNodeRecursively(tree));
+        };
+
+        const moveNode = (id, direction) => {
+          const findAndMove = (node, parentId = null) => {
+            if (!node.children) return { node, found: false };
+
+            let nodeIndex = -1;
+            let found = false;
+
+            // 找到目标节点
+            for (let i = 0; i < node.children.length; i++) {
+              if (node.children[i].id === id) {
+                nodeIndex = i;
+                found = true;
+                break;
+              }
+            }
+
+            if (found) {
+              // 如果是上移且不是第一个，或下移且不是最后一个
+              if ((direction === "up" && nodeIndex > 0) || 
+                  (direction === "down" && nodeIndex < node.children.length - 1)) {
+                
+                const newChildren = [...node.children];
+                const targetIndex = direction === "up" ? nodeIndex - 1 : nodeIndex + 1;
+                
+                // 交换节点位置
+                [newChildren[nodeIndex], newChildren[targetIndex]] = 
+                [newChildren[targetIndex], newChildren[nodeIndex]];
+                
+                return {
+                  node: { ...node, children: newChildren },
+                  found: true
+                };
+              } else {
+                // 如果无法移动（已在边界），返回原节点
+                return { node, found: true };
+              }
+            }
+
+            // 如果当前节点不是目标节点，递归处理子节点
+            const updatedChildren = [];
+            let foundInChildren = false;
+
+            for (const child of node.children) {
+              if (foundInChildren) {
+                updatedChildren.push(child);
+              } else {
+                const result = findAndMove(child, node.id);
+                updatedChildren.push(result.node);
+                if (result.found) {
+                  foundInChildren = true;
+                }
+              }
+            }
+
+            return {
+              node: { ...node, children: updatedChildren },
+              found: foundInChildren
+            };
+          };
+
+          const result = findAndMove(tree);
+          if (result.found) {
+            setTree(result.node);
+          }
         };
 
         const saveToFile = async () => {
@@ -680,6 +1003,9 @@
                   onUpdate: updateNode,
                   onDelete: deleteNode,
                   onAddChild: addChildNode,
+                  onMove: moveNode,
+                  parentChildren: [tree], // 根节点的父节点数组只包含自己
+                  nodeIndex: 0, // 根节点的索引为0
                   level: 0,
                 })
               )
