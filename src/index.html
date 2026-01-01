@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TreeStructurEditor - Tree-based Markdown Editor</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css"
+    />
+    <style>
+      .markdown-preview h1 {
+        font-size: 1.8rem;
+        color: #1e40af;
+        margin-bottom: 0.5rem;
+      }
+      .markdown-preview h2 {
+        font-size: 1.5rem;
+        color: #1d4ed8;
+        margin: 1rem 0 0.5rem;
+      }
+      .markdown-preview h3 {
+        font-size: 1.25rem;
+        color: #1e40af;
+        margin: 0.8rem 0 0.4rem;
+      }
+      .markdown-preview p {
+        margin: 0.8rem 0;
+        line-height: 1.6;
+        color: #334155;
+      }
+      .markdown-preview strong {
+        color: #1e3a8a;
+        font-weight: 600;
+      }
+      .markdown-preview em {
+        color: #0f172a;
+        font-style: italic;
+      }
+      .markdown-preview ul {
+        margin: 0.8rem 0;
+        padding-left: 1.5rem;
+      }
+      .markdown-preview li {
+        margin: 0.3rem 0;
+        line-height: 1.6;
+        color: #475569;
+      }
+      .markdown-preview blockquote {
+        border-left: 3px solid #3b82f6;
+        padding-left: 1rem;
+        margin: 1rem 0;
+        color: #1e3a8a;
+        font-style: italic;
+      }
+      .markdown-preview br {
+        content: "";
+        display: block;
+        margin: 0.2rem 0;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-6">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { invoke } = window.__TAURI__.core;
+      // Full markdown parser with math formula support using marked and katex
+      const fullMarkdownParser = (text) => {
+        if (!text) return "";
+
+        // 配置 marked 解析器以支持数学公式
+        marked.setOptions({
+          gfm: true,
+          breaks: false,
+          // 使用自定义的 renderer 来处理数学公式
+          highlight: function (code, lang) {
+            const hljs = window.hljs;
+            if (hljs && hljs.highlightAuto) {
+              const language = hljs.getLanguage(lang) ? lang : "plaintext";
+              return hljs.highlight(code, { language }).value;
+            }
+            return code;
+          },
+        });
+
+        // 在解析前，先将数学公式标记保护起来
+        let protectedText = text;
+        const mathPatterns = [];
+        let mathIndex = 0;
+
+        // 匹配行内数学公式 $...$
+        protectedText = protectedText.replace(
+          /\$([^$]+?)\$/g,
+          (match, content) => {
+            const placeholder = `MATH_INLINE_${mathIndex}`;
+            mathPatterns.push({ placeholder, content, type: "inline" });
+            mathIndex++;
+            return `$${placeholder}$`;
+          }
+        );
+
+        // 匹配块级数学公式 $$...$$
+        protectedText = protectedText.replace(
+          /\$\$([^$]+?)\$\$/g,
+          (match, content) => {
+            const placeholder = `MATH_BLOCK_${mathIndex}`;
+            mathPatterns.push({ placeholder, content, type: "block" });
+            mathIndex++;
+            return `$$${placeholder}$$`;
+          }
+        );
+
+        // 解析 Markdown
+        let html = marked.parse(protectedText);
+
+        // 替换占位符为实际的数学公式渲染
+        mathPatterns.forEach((item) => {
+          const escapedPlaceholder = item.placeholder.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&"
+          );
+          const regex = new RegExp(`\\$\\$?${escapedPlaceholder}\\$\\$?`, "g");
+
+          // 根据类型渲染数学公式
+          let mathElement;
+          if (item.type === "inline") {
+            mathElement = `<span class="katex-inline" data-math="${encodeURIComponent(
+              item.content
+            )}"></span>`;
+          } else {
+            mathElement = `<div class="katex-block" data-math="${encodeURIComponent(
+              item.content
+            )}"></div>`;
+          }
+
+          html = html.replace(regex, mathElement);
+        });
+
+        return html;
+      };
+
+      // 在组件挂载后渲染数学公式
+      const renderMath = () => {
+        document.querySelectorAll("[data-math]").forEach((mathNode) => {
+          const mathContent = decodeURIComponent(
+            mathNode.getAttribute("data-math")
+          );
+          try {
+            if (mathNode.classList.contains("katex-block")) {
+              katex.render(mathContent, mathNode, {
+                throwOnError: false,
+                displayMode: true,
+              });
+            } else {
+              katex.render(mathContent, mathNode, {
+                throwOnError: false,
+                displayMode: false,
+              });
+            }
+          } catch (error) {
+            console.error("KaTeX rendering error:", error);
+            mathNode.innerHTML = `\\[${mathContent}\\]`; // 回退显示
+          }
+        });
+      };
+
+      const TreeNode = ({
+        node,
+        onUpdate,
+        onDelete,
+        onAddChild,
+        level = 0,
+      }) => {
+        const [isEditing, setIsEditing] = React.useState(false);
+        const [localContent, setLocalContent] = React.useState(
+          node.content || ""
+        );
+        const [expanded, setExpanded] = React.useState(true);
+
+        const nodeRef = React.useRef(null);
+
+        // 更新本地内容当 prop 变化时
+        React.useEffect(() => {
+          setLocalContent(node.content || "");
+        }, [node.content]);
+
+        // 每次内容更新后渲染数学公式
+        React.useEffect(() => {
+          if (!isEditing && nodeRef.current) {
+            renderMath();
+          }
+        }, [localContent, isEditing]);
+
+        const handleContentChange = (e) => {
+          const newContent = e.target.value;
+          setLocalContent(newContent);
+          onUpdate(node.id, { content: newContent });
+        };
+
+        const handleTitleChange = (e) => {
+          onUpdate(node.id, { title: e.target.value });
+        };
+
+        const handleAddBranch = () => {
+          onAddChild(node.id, "branch");
+        };
+
+        const handleAddLeaf = () => {
+          onAddChild(node.id, "leaf");
+        };
+
+        const renderChildren = () => {
+          if (!expanded || !node.children || node.children.length === 0)
+            return null;
+
+          return React.createElement(
+            "ul",
+            { className: "ml-2 pl-0  border-dashed border-blue-200" },
+            node.children.map((child) =>
+              React.createElement(TreeNode, {
+                key: child.id,
+                node: child,
+                onUpdate: onUpdate,
+                onDelete: onDelete,
+                onAddChild: onAddChild,
+                level: level + 1,
+              })
+            )
+          );
+        };
+
+        return React.createElement(
+          "li",
+          {
+            className: `relative mb-1 pl-1 ${
+              node.type === "branch" ? "cursor-pointer" : ""
+            }`,
+          },
+          // 连接线
+          // level > 0 && React.createElement("div", {
+          //     className: "absolute top-4 left-0 w-6 h-px bg-blue-400 border-t-2 border-dashed"
+          // }),
+
+          React.createElement(
+            "div",
+            {
+              ref: nodeRef,
+              className: `p-2 rounded-lg ${
+                node.type === "branch"
+                  ? "bg-blue-50 border-2 border-blue-200 hover:bg-blue-100"
+                  : "bg-emerald-50 border-2 border-emerald-200"
+              }`,
+            },
+            React.createElement(
+              "div",
+              { className: "flex items-start justify-between" },
+              node.type === "branch"
+                ? React.createElement(
+                    "div",
+                    { className: "flex items-center w-full" },
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: (e) => {
+                          e.stopPropagation();
+                          setExpanded(!expanded);
+                        },
+                        className:
+                          "mr-2 text-blue-600 hover:text-blue-800 focus:outline-none",
+                      },
+                      expanded ? "▼" : "▶"
+                    ),
+                    React.createElement("input", {
+                      type: "text",
+                      value: node.title,
+                      onChange: handleTitleChange,
+                      className:
+                        "font-bold text-lg bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-300",
+                      placeholder: "Branch title",
+                    })
+                  )
+                : React.createElement(
+                    "div",
+                    { className: "flex-1" },
+                    isEditing
+                      ? React.createElement("textarea", {
+                          value: localContent,
+                          onChange: handleContentChange,
+                          className:
+                            "w-full h-40 p-3 border-2 border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-500",
+                          placeholder: "Write markdown here...",
+                        })
+                      : React.createElement("div", {
+                          className: "prose prose-blue markdown-preview",
+                          dangerouslySetInnerHTML: {
+                            __html: fullMarkdownParser(localContent),
+                          },
+                        })
+                  ),
+
+              React.createElement(
+                "div",
+                { className: "flex space-x-2 ml-1" },
+                node.type === "branch" &&
+                  React.createElement(
+                    "div",
+                    { className: "flex space-x-1" },
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: (e) => {
+                          e.stopPropagation();
+                          handleAddBranch();
+                        },
+                        className:
+                          "px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200",
+                      },
+                      "+ Branch"
+                    ),
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: (e) => {
+                          e.stopPropagation();
+                          handleAddLeaf();
+                        },
+                        className:
+                          "px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200",
+                      },
+                      "+ Leaf"
+                    )
+                  ),
+
+                node.type === "leaf" &&
+                  React.createElement(
+                    "button",
+                    {
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        setIsEditing(!isEditing);
+                      },
+                      className: `px-2 py-1 text-xs rounded ${
+                        isEditing
+                          ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                          : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                      }`,
+                    },
+                    isEditing ? "Preview" : "Edit"
+                  ),
+
+                React.createElement(
+                  "button",
+                  {
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      onDelete(node.id);
+                    },
+                    className:
+                      "px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200",
+                  },
+                  "Delete"
+                )
+              )
+            ),
+
+            node.type === "branch" && renderChildren()
+          )
+        );
+      };
+
+      const generateId = () =>
+        `node-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      const initialTree = {
+        id: generateId(),
+        type: "branch",
+        title: "Root",
+        children: [
+          {
+            id: generateId(),
+            type: "leaf",
+            title: "Introduction",
+            content:
+              "# Welcome to TreeEditor\n\nThis is a **tree-based** markdown editor where:\n\n- Branches organize content\n- Leaves contain editable markdown\n- Everything connects visually\n\nTry editing this leaf!",
+          },
+          {
+            id: generateId(),
+            type: "branch",
+            title: "Documentation",
+            children: [
+              {
+                id: generateId(),
+                type: "leaf",
+                title: "Features",
+                content:
+                  "## Core Features\n\n- **Real-time rendering** of markdown\n- Tree structure with visual connections\n- File saving/loading\n- Intuitive node management\n\n> Perfect for organizing complex documents",
+              },
+            ],
+          },
+        ],
+      };
+
+      const App = () => {
+        const [tree, setTree] = React.useState(initialTree);
+        const [fileName, setFileName] = React.useState(null);
+
+        const updateNode = (id, updates) => {
+          const updateNodeRecursively = (node) => {
+            if (node.id === id) {
+              return { ...node, ...updates };
+            }
+
+            if (node.children) {
+              return {
+                ...node,
+                children: node.children.map(updateNodeRecursively),
+              };
+            }
+
+            return node;
+          };
+
+          setTree(updateNodeRecursively(tree));
+        };
+
+        const deleteNode = (id) => {
+          const deleteNodeRecursively = (node) => {
+            if (!node.children) return node;
+
+            const filteredChildren = node.children.filter(
+              (child) => child.id !== id
+            );
+
+            if (filteredChildren.length !== node.children.length) {
+              return { ...node, children: filteredChildren };
+            }
+
+            return {
+              ...node,
+              children: node.children.map(deleteNodeRecursively),
+            };
+          };
+
+          setTree(deleteNodeRecursively(tree));
+        };
+
+        const addChildNode = (parentId, type) => {
+          const newNode = {
+            id: generateId(),
+            type,
+            title: type === "branch" ? "New Branch" : `Leaf ${Date.now()}`,
+            content: type === "leaf" ? "# New Leaf" : "",
+            children: type === "branch" ? [] : undefined,
+          };
+
+          const addNodeRecursively = (node) => {
+            if (node.id === parentId) {
+              return {
+                ...node,
+                children: [...(node.children || []), newNode],
+              };
+            }
+
+            if (node.children) {
+              return {
+                ...node,
+                children: node.children.map(addNodeRecursively),
+              };
+            }
+
+            return node;
+          };
+
+          setTree(addNodeRecursively(tree));
+        };
+
+        const saveToFile = () => {
+          const dataStr = JSON.stringify(tree, null, 2);
+          // const dataBlob = new Blob([dataStr], { type: 'application/json' });
+          // const url = URL.createObjectURL(dataBlob);
+
+          // const link = document.createElement('a');
+          // link.href = url;
+          // link.download = fileName;
+          // document.body.appendChild(link);
+          // link.click();
+          // document.body.removeChild(link);
+          // URL.revokeObjectURL(url);
+
+          // tauri
+          if (fileName === null) {
+            return;
+          }
+          const result = invoke("save_file", {
+            path: fileName,
+            content: dataStr,
+          });
+          result
+            .then((data) => {
+              console.log(data);
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+        };
+
+        const handleFileUpload = async (e) => {
+          e.preventDefault();
+          const selected = await window.__TAURI__.dialog.open({
+            filters: [
+              {
+                name: "TreeEditor Files",
+                extensions: ["json"],
+              },
+            ],
+          });
+
+          if (selected === null) return; // User cancelled the dialog
+
+          const filePath = selected; // This is the absolute path
+          setFileName(filePath); // Now we have the full path
+
+          try {
+            const fileContent = await invoke("open_file", { path: filePath });
+            const parsedTree = JSON.parse(fileContent);
+            setTree(parsedTree);
+          } catch (error) {
+            console.error("Error reading or parsing file:", error);
+            alert(
+              "Invalid file format or error reading file. Please upload a valid TreeEditor JSON file."
+            );
+          }
+        };
+
+        React.useEffect(() => {
+          if (!fileName) return;
+          const autoSaveTimer = setInterval(() => {
+            saveToFile();
+          }, 1000 * 60 * 1);
+          return () => {
+            if (autoSaveTimer) {
+              clearInterval(autoSaveTimer);
+            }
+          };
+        }, [fileName, tree]);
+
+        return React.createElement(
+          "div",
+          { className: " mx-auto" },
+          React.createElement(
+            "header",
+            { className: "text-center mb-10" },
+            React.createElement(
+              "h1",
+              {
+                className:
+                  "text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-700 mb-4",
+              },
+              "TreeEditor"
+            ),
+            React.createElement(
+              "p",
+              { className: "text-lg text-slate-700 mx-auto" },
+              "A hierarchical markdown editor with visual tree structure"
+            )
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className:
+                "flex flex-col md:flex-row justify-between items-center mb-8 gap-4",
+            },
+            React.createElement(
+              "div",
+              { className: "flex flex-wrap gap-3" },
+              React.createElement(
+                "button",
+                {
+                  onClick: saveToFile,
+                  className:
+                    "px-5 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-xl shadow-md hover:from-blue-600 hover:to-indigo-700 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2",
+                },
+                "Save Document"
+              ),
+              React.createElement(
+                "button",
+                {
+                  onClick: handleFileUpload,
+                  className:
+                    "px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium rounded-xl shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all transform hover:-translate-y-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2",
+                },
+                "Open Document"
+              )
+            ),
+            React.createElement(
+              "div",
+              { className: "bg-white rounded-xl shadow-md p-4 flex-1 " },
+              React.createElement(
+                "div",
+                { className: "flex items-center" },
+                React.createElement(
+                  "span",
+                  { className: "text-slate-500 mr-2" },
+                  "File:"
+                ),
+                React.createElement(
+                  "span",
+                  {
+                    className:
+                      "font-mono font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded",
+                  },
+                  fileName
+                )
+              )
+            )
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className:
+                "bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-200",
+            },
+            React.createElement(
+              "div",
+              { className: "tree" },
+              React.createElement(
+                "ul",
+                { className: "list-none p-0 m-0" },
+                React.createElement(TreeNode, {
+                  node: tree,
+                  onUpdate: updateNode,
+                  onDelete: deleteNode,
+                  onAddChild: addChildNode,
+                  level: 0,
+                })
+              )
+            )
+          ),
+
+          React.createElement(
+            "footer",
+            { className: "mt-12 text-center text-slate-500 text-sm" },
+            React.createElement(
+              "p",
+              null,
+              "TreeEditor • Hierarchical Markdown Editor • Save your work frequently"
+            )
+          )
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(React.createElement(App));
+    </script>
+  </body>
+</html>
