@@ -40,12 +40,24 @@ fn save_file(path: String, content: String) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn save_pdf_file(path: String, pdf_data: Vec<u8>) -> Result<String, String> {
+    let file_path = Path::new(&path);
+    match File::create(file_path) {
+        Ok(mut file) => match file.write_all(&pdf_data) {
+            Ok(_) => Ok("PDF file saved successfully".to_string()),
+            Err(e) => Err(format!("Failed to write PDF to file: {}", e)),
+        },
+        Err(e) => Err(format!("Failed to create PDF file: {}", e)),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, open_file, save_file])
+        .invoke_handler(tauri::generate_handler![greet, open_file, save_file, save_pdf_file])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

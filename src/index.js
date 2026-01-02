@@ -119,6 +119,14 @@ const TreeNode = ({
     const nodeRef = React.useRef(null);
     const textareaRef = React.useRef(null);
 
+    // 自适应 textarea 高度
+    const adjustTextareaHeight = () => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        }
+    };
+
     // 监听窗口大小变化
     React.useEffect(() => {
         const checkMobile = () => {
@@ -148,6 +156,14 @@ const TreeNode = ({
             renderMath();
         }
     }, [localContent, isEditing]);
+
+    // 当编辑状态改变或内容改变时，调整textarea高度
+    React.useEffect(() => {
+        if (isEditing && textareaRef.current) {
+            // 延迟执行，确保DOM已经更新
+            setTimeout(adjustTextareaHeight, 0);
+        }
+    }, [isEditing, localContent]);
 
     const handleContentChange = (e) => {
         const newContent = e.target.value;
@@ -270,8 +286,9 @@ const TreeNode = ({
                                 ref: textareaRef,
                                 value: localContent,
                                 onChange: handleContentChange,
+                                onInput: adjustTextareaHeight,
                                 className:
-                                    "w-full h-40 p-3 border-2 border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-500",
+                                    "w-full min-h-20 p-3 border-2 border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-500",
                                 placeholder: "Write markdown here...",
                                 onBlur: (e) => {
                                     e.stopPropagation();
@@ -820,13 +837,14 @@ const App = () => {
         pdfContainer.id = 'pdf-content';
         pdfContainer.style.position = 'absolute';
         pdfContainer.style.left = '-9999px';
-        pdfContainer.style.width = '210mm'; // A4 宽度
-        pdfContainer.style.padding = '20mm';
+        pdfContainer.style.width = '2480px'; // A4 at 300 DPI (大约 8.27 * 300)
+        pdfContainer.style.padding = '200px'; // 按比例增加边距
         pdfContainer.style.fontFamily = 'Arial, sans-serif';
         pdfContainer.style.backgroundColor = 'white';
         pdfContainer.style.color = 'black';
-        pdfContainer.style.fontSize = '12px';
+        pdfContainer.style.fontSize = '36px'; // 按比例增加字体大小
         pdfContainer.style.lineHeight = '1.5';
+        pdfContainer.style.boxSizing = 'border-box';
 
         // 递归生成树结构的HTML表示
         const generateTreeHTML = (node, level = 0) => {
@@ -837,33 +855,34 @@ const App = () => {
             const marginLeft = level * 10;
 
             if (node.type === 'branch') {
-                html += `<div style="margin-left: ${marginLeft}px; margin-bottom: 8px; font-weight: bold; font-size: ${Math.max(12, 16 - level * 1.5)}px;">`;
+                const scaledMarginLeft = marginLeft * 3; // 按 3 倍比例缩放
+                html += `<div style="margin-left: ${scaledMarginLeft}px; margin-bottom: 24px; font-weight: bold; font-size: ${Math.max(36, 48 - level * 4.5)}px;">`;
                 html += `${indent}${node.title}`;
                 html += '</div>';
 
                 if (node.children && node.children.length > 0) {
-                    html += '<div style="margin-left: ' + marginLeft + 'px;">';
+                    html += '<div style="margin-left: ' + scaledMarginLeft + 'px;">';
                     node.children.forEach(child => {
                         html += generateTreeHTML(child, level + 1);
                     });
                     html += '</div>';
                 }
             } else {
-                html += `<div style="margin-left: ${marginLeft}px; margin-bottom: 15px; padding: 8px; border-left: 2px solid #000;">`;
-                html += `<div style="font-weight: bold; margin-bottom: 5px;">${node.title}</div>`;
+                const scaledMarginLeft = marginLeft * 3; // 按 3 倍比例缩放
+                html += `<div style="margin-left: ${scaledMarginLeft}px; margin-bottom: 45px; padding: 24px; border-left: 3px solid #000;">`;
 
                 // 处理 Markdown 内容
                 const tempDiv = document.createElement('div');
                 const parsedContent = fullMarkdownParser(node.content || '');
                 tempDiv.innerHTML = parsedContent;
 
-                // 适配黑白打印：移除颜色样式，调整格式
-                const elements = tempDiv.querySelectorAll('*');
-                elements.forEach(el => {
-                    el.style.color = 'black';
-                    el.style.backgroundColor = 'transparent';
-                    el.style.border = '';
-                });
+                // // 适配黑白打印：移除颜色样式，调整格式
+                // const elements = tempDiv.querySelectorAll('*');
+                // elements.forEach(el => {
+                //     el.style.color = 'black';
+                //     el.style.backgroundColor = 'transparent';
+                //     el.style.border = '';
+                // });
 
                 html += tempDiv.innerHTML;
                 html += '</div>';
@@ -874,11 +893,11 @@ const App = () => {
 
         // 生成完整的HTML
         pdfContainer.innerHTML = `
-            <h1 style="text-align: center; color: black; font-size: 24px;">${tree.title || 'Tree Editor Document'}</h1>
-            <div style="margin-top: 20px;">
+            <h1 style="text-align: center; color: black; font-size: 72px;">${tree.title || 'Tree Editor Document'}</h1>
+            <div style="margin-top: 60px;">
               ${generateTreeHTML(tree)}
             </div>
-            <div style="margin-top: 30px; font-size: 10px; color: gray; text-align: center; border-top: 1px solid #ccc; padding-top: 10px;">
+            <div style="margin-top: 90px; font-size: 30px; color: gray; text-align: center; border-top: 3px solid #ccc; padding-top: 30px;">
               Generated by TreeStructureEditor | Page created on ${new Date().toLocaleDateString()}
             </div>
           `;
@@ -916,39 +935,94 @@ const App = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
 
         // 使用 html2canvas 和 jsPDF 生成 PDF
-        setTimeout(() => {
-            html2canvas(pdfContainer).then(canvas => {
+        setTimeout(async () => {
+            try {
+                const canvas = await html2canvas(pdfContainer, {
+                    scale: 2, // 提高渲染比例
+                    pixelRatio: window.devicePixelRatio || 2, // 使用设备像素比
+                    useCORS: true, // 启用跨域资源共享
+                    allowTaint: true, // 允许污染画布
+                    backgroundColor: '#ffffff' // 确保背景为白色
+                });
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new window.jspdf.jsPDF({
                     orientation: 'portrait',
                     unit: 'mm',
                     format: 'A4',
-                    compress: true
+                    compress: false
                 });
 
                 const imgWidth = 210 - 20; // A4 width minus margins
                 const pageHeight = 297 - 20; // A4 height minus margins
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                // 由于我们使用了高分辨率画布，需要按比例调整高度
+                const imgHeight = (canvas.height * (210 - 20)) / canvas.width;
                 let heightLeft = imgHeight;
                 let position = 10;
 
-                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight, null, 'FAST'); // 使用快速插值
                 heightLeft -= pageHeight;
 
                 // 如果内容超过一页，添加新页
                 while (heightLeft >= 0) {
                     position = heightLeft - imgHeight;
                     pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight, null, 'FAST');
                     heightLeft -= pageHeight;
                 }
 
-                // 保存PDF
-                pdf.save('tree-editor-document.pdf');
+                // 获取PDF的二进制数据
+                const pdfBlob = pdf.output('blob');
+                const pdfArrayBuffer = await pdfBlob.arrayBuffer();
+                const pdfUint8Array = new Uint8Array(pdfArrayBuffer);
+
+                // 如果设置了文件名，则保存到同级目录，否则提示用户选择保存位置
+                if (fileName) {
+                    // 从当前文件路径获取目录和文件名
+                    const pathParts = fileName.split('/');
+                    const fileBaseName = pathParts[pathParts.length - 1].replace('.json', '.pdf');
+                    const pdfPath = fileName.replace(/\.json$/, '.pdf');
+
+                    // 使用Tauri的invoke命令保存PDF文件
+                    try {
+                        const result = await invoke("save_pdf_file", {
+                            path: pdfPath,
+                            pdfData: Array.from(pdfUint8Array)
+                        });
+                        console.log(result);
+                    } catch (error) {
+                        console.error("Error saving PDF:", error);
+                        alert("Error saving PDF: " + error.message);
+                    }
+                } else {
+                    // 如果没有当前文件，提示用户选择保存位置
+                    const newName = await window.__TAURI__.dialog.save({
+                        filters: [{
+                            name: "PDF Files",
+                            extensions: ["pdf"]
+                        }]
+                    });
+
+                    if (newName) {
+                        try {
+                            const result = await invoke("save_pdf_file", {
+                                path: newName,
+                                pdf_data: Array.from(pdfUint8Array)
+                            });
+                            console.log(result);
+                            alert(`PDF saved successfully to: ${newName}`);
+                        } catch (error) {
+                            console.error("Error saving PDF:", error);
+                            alert("Error saving PDF: " + error.message);
+                        }
+                    }
+                }
 
                 // 清理临时元素
                 document.body.removeChild(pdfContainer);
-            });
+            } catch (error) {
+                console.error("Error generating PDF:", error);
+                alert("Error generating PDF: " + error.message);
+            }
         }, 500);
     };
 
