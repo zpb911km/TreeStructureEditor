@@ -222,8 +222,8 @@ const TreeNode = ({
             {
                 ref: nodeRef,
                 className: `p-2 rounded-lg ${node.type === "branch"
-                        ? "bg-blue-50 border-2 border-blue-200 hover:bg-blue-100"
-                        : "bg-emerald-50 border-2 border-emerald-200"
+                    ? "bg-blue-50 border-2 border-blue-200 hover:bg-blue-100"
+                    : "bg-emerald-50 border-2 border-emerald-200"
                     }`,
                 onClick: (e) => {
                     e.stopPropagation();
@@ -555,8 +555,8 @@ const TreeNode = ({
                                         }
                                     },
                                     className: `px-2 py-1 text-xs rounded ${isEditing
-                                            ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                                            : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                                        ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                                        : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
                                         }`,
                                 },
                                 isEditing ? "Preview" : "Edit"
@@ -768,59 +768,82 @@ const App = () => {
         // document.body.removeChild(link);
         // URL.revokeObjectURL(url);
 
-        // tauri
-        if (fileName === null) {
-            const newName = await window.__TAURI__.dialog.save({
-                extends: ".json",
+        try {
+            // tauri
+            if (fileName === null) {
+                const newName = await window.__TAURI__.dialog.save({
+                    extends: ".json",
+                });
+                if (newName) {
+                    setFileName(newName);
+                } else {
+                    // 用户取消了保存对话框，不执行保存
+                    return;
+                }
+            }
+            const result = invoke("save_file", {
+                path: fileName,
+                content: dataStr,
             });
-            setFileName(newName);
+            await result;
+            showSuccess("Document saved successfully!");
+        } catch (error) {
+            console.error("Error saving file:", error);
+            showError("Failed to save document: " + error.message);
         }
-        const result = invoke("save_file", {
-            path: fileName,
-            content: dataStr,
-        });
-        result
-            .then((data) => {
-                console.log(data);
-            })
-            .catch((err) => {
-                console.log(err);
-            });
     };
 
     const handleFileUpload = async (e) => {
         e.preventDefault();
-        const selected = await window.__TAURI__.dialog.open({
-            filters: [
-                {
-                    name: "TreeStructureEditor Files",
-                    extensions: ["json"],
-                },
-            ],
-        });
-
-        if (selected === null) return; // User cancelled the dialog
-
-        const filePath = selected; // This is the absolute path
-        setFileName(filePath); // Now we have the full path
-
         try {
+            const selected = await window.__TAURI__.dialog.open({
+                filters: [
+                    {
+                        name: "TreeStructureEditor Files",
+                        extensions: ["json"],
+                    },
+                ],
+            });
+
+            if (selected === null) {
+                showInfo("File opening cancelled.");
+                return; // User cancelled the dialog
+            }
+
+            const filePath = selected; // This is the absolute path
+            setFileName(filePath); // Now we have the full path
+
             const fileContent = await invoke("open_file", { path: filePath });
             const parsedTree = JSON.parse(fileContent);
             setTree(parsedTree);
+            showSuccess("Document opened successfully!");
         } catch (error) {
             console.error("Error reading or parsing file:", error);
-            alert(
-                "Invalid file format or error reading file. Please upload a valid TreeStructureEditor JSON file."
-            );
+            showError("Failed to open document: " + error.message);
         }
     };
 
+    // 自动保存功能，带通知
     React.useEffect(() => {
         if (!fileName) return;
         const autoSaveTimer = setInterval(() => {
-            saveToFile();
-        }, 1000 * 60 * 1);
+            // 自动保存时显示通知
+            const dataStr = JSON.stringify(tree, null, 2);
+            const result = invoke("save_file", {
+                path: fileName,
+                content: dataStr,
+            });
+            result
+                .then((data) => {
+                    console.log("Auto-saved successfully");
+                    // 可以选择性地显示自动保存成功通知（避免过多通知）
+                    // showSuccess("Document auto-saved successfully!");
+                })
+                .catch((err) => {
+                    console.error("Auto-save failed:", err);
+                    showError("Auto-save failed: " + err.message);
+                });
+        }, 1000 * 60 * 1); // 每分钟自动保存一次
         return () => {
             if (autoSaveTimer) {
                 clearInterval(autoSaveTimer);
@@ -829,201 +852,211 @@ const App = () => {
     }, [fileName, tree]);
 
     const generatePDF = async () => {
-        // 等待 DOM 更新和数学公式渲染
-        await new Promise(resolve => setTimeout(resolve, 300));
+        try {
+            showInfo("Generating PDF...");
 
-        // 创建一个隐藏的容器用于生成PDF内容
-        const pdfContainer = document.createElement('div');
-        pdfContainer.id = 'pdf-content';
-        pdfContainer.style.position = 'absolute';
-        pdfContainer.style.left = '-9999px';
-        pdfContainer.style.width = '2480px'; // A4 at 300 DPI (大约 8.27 * 300)
-        pdfContainer.style.padding = '200px'; // 按比例增加边距
-        pdfContainer.style.fontFamily = 'Arial, sans-serif';
-        pdfContainer.style.backgroundColor = 'white';
-        pdfContainer.style.color = 'black';
-        pdfContainer.style.fontSize = '36px'; // 按比例增加字体大小
-        pdfContainer.style.lineHeight = '1.5';
-        pdfContainer.style.boxSizing = 'border-box';
+            // 等待 DOM 更新和数学公式渲染
+            await new Promise(resolve => setTimeout(resolve, 300));
 
-        // 递归生成树结构的HTML表示
-        const generateTreeHTML = (node, level = 0) => {
-            let html = '';
+            // 创建一个隐藏的容器用于生成PDF内容
+            const pdfContainer = document.createElement('div');
+            pdfContainer.id = 'pdf-content';
+            pdfContainer.style.position = 'absolute';
+            pdfContainer.style.left = '-9999px';
+            pdfContainer.style.width = '2480px'; // A4 at 300 DPI (大约 8.27 * 300)
+            pdfContainer.style.padding = '200px'; // 按比例增加边距
+            pdfContainer.style.fontFamily = 'Arial, sans-serif';
+            pdfContainer.style.backgroundColor = 'white';
+            pdfContainer.style.color = 'black';
+            pdfContainer.style.fontSize = '36px'; // 按比例增加字体大小
+            pdfContainer.style.lineHeight = '1.5';
+            pdfContainer.style.boxSizing = 'border-box';
 
-            // 根据层级添加缩进
-            const indent = '  '.repeat(level);
-            const marginLeft = level * 10;
+            // 递归生成树结构的HTML表示
+            const generateTreeHTML = (node, level = 0) => {
+                let html = '';
 
-            if (node.type === 'branch') {
-                const scaledMarginLeft = marginLeft * 3; // 按 3 倍比例缩放
-                html += `<div style="margin-left: ${scaledMarginLeft}px; margin-bottom: 24px; font-weight: bold; font-size: ${Math.max(36, 48 - level * 4.5)}px;">`;
-                html += `${indent}${node.title}`;
-                html += '</div>';
+                // 根据层级添加缩进
+                const indent = '  '.repeat(level);
+                const marginLeft = level * 10;
 
-                if (node.children && node.children.length > 0) {
-                    html += '<div style="margin-left: ' + scaledMarginLeft + 'px;">';
-                    node.children.forEach(child => {
-                        html += generateTreeHTML(child, level + 1);
-                    });
+                if (node.type === 'branch') {
+                    const scaledMarginLeft = marginLeft * 3; // 按 3 倍比例缩放
+                    html += `<div style="margin-left: ${scaledMarginLeft}px; margin-bottom: 24px; font-weight: bold; font-size: ${Math.max(36, 48 - level * 4.5)}px;">`;
+                    html += `${indent}${node.title}`;
+                    html += '</div>';
+
+                    if (node.children && node.children.length > 0) {
+                        html += '<div style="margin-left: ' + scaledMarginLeft + 'px;">';
+                        node.children.forEach(child => {
+                            html += generateTreeHTML(child, level + 1);
+                        });
+                        html += '</div>';
+                    }
+                } else {
+                    const scaledMarginLeft = marginLeft * 3; // 按 3 倍比例缩放
+                    html += `<div style="margin-left: ${scaledMarginLeft}px; margin-bottom: 45px; padding: 24px; border-left: 3px solid #000;">`;
+
+                    // 处理 Markdown 内容
+                    const tempDiv = document.createElement('div');
+                    const parsedContent = fullMarkdownParser(node.content || '');
+                    tempDiv.innerHTML = parsedContent;
+
+                    // // 适配黑白打印：移除颜色样式，调整格式
+                    // const elements = tempDiv.querySelectorAll('*');
+                    // elements.forEach(el => {
+                    //     el.style.color = 'black';
+                    //     el.style.backgroundColor = 'transparent';
+                    //     el.style.border = '';
+                    // });
+
+                    html += tempDiv.innerHTML;
                     html += '</div>';
                 }
-            } else {
-                const scaledMarginLeft = marginLeft * 3; // 按 3 倍比例缩放
-                html += `<div style="margin-left: ${scaledMarginLeft}px; margin-bottom: 45px; padding: 24px; border-left: 3px solid #000;">`;
 
-                // 处理 Markdown 内容
-                const tempDiv = document.createElement('div');
-                const parsedContent = fullMarkdownParser(node.content || '');
-                tempDiv.innerHTML = parsedContent;
+                return html;
+            };
 
-                // // 适配黑白打印：移除颜色样式，调整格式
-                // const elements = tempDiv.querySelectorAll('*');
-                // elements.forEach(el => {
-                //     el.style.color = 'black';
-                //     el.style.backgroundColor = 'transparent';
-                //     el.style.border = '';
-                // });
+            // 生成完整的HTML
+            pdfContainer.innerHTML = `
+                <h1 style="text-align: center; color: black; font-size: 72px;">${tree.title || 'Tree Editor Document'}</h1>
+                <div style="margin-top: 60px;">
+                  ${generateTreeHTML(tree)}
+                </div>
+                <div style="margin-top: 90px; font-size: 30px; color: gray; text-align: center; border-top: 3px solid #ccc; padding-top: 30px;">
+                  Generated by TreeStructureEditor | Page created on ${new Date().toLocaleDateString()}
+                </div>
+              `;
 
-                html += tempDiv.innerHTML;
-                html += '</div>';
-            }
+            // 添加到页面
+            document.body.appendChild(pdfContainer);
 
-            return html;
-        };
-
-        // 生成完整的HTML
-        pdfContainer.innerHTML = `
-            <h1 style="text-align: center; color: black; font-size: 72px;">${tree.title || 'Tree Editor Document'}</h1>
-            <div style="margin-top: 60px;">
-              ${generateTreeHTML(tree)}
-            </div>
-            <div style="margin-top: 90px; font-size: 30px; color: gray; text-align: center; border-top: 3px solid #ccc; padding-top: 30px;">
-              Generated by TreeStructureEditor | Page created on ${new Date().toLocaleDateString()}
-            </div>
-          `;
-
-        // 添加到页面
-        document.body.appendChild(pdfContainer);
-
-        // 渲染数学公式
-        const mathElements = pdfContainer.querySelectorAll("[data-math]");
-        mathElements.forEach((mathNode) => {
-            const mathContent = decodeURIComponent(
-                mathNode.getAttribute("data-math")
-            );
-            try {
-                // 渲染数学公式
-                if (mathNode.classList.contains("katex-block")) {
-                    katex.render(mathContent, mathNode, {
-                        throwOnError: false,
-                        displayMode: true,
-                        output: 'html'
-                    });
-                } else {
-                    katex.render(mathContent, mathNode, {
-                        throwOnError: false,
-                        displayMode: false,
-                        output: 'html'
-                    });
-                }
-            } catch (error) {
-                console.error("KaTeX rendering error in PDF generation:", error);
-            }
-        });
-
-        // 等待公式渲染完成
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // 使用 html2canvas 和 jsPDF 生成 PDF
-        setTimeout(async () => {
-            try {
-                const canvas = await html2canvas(pdfContainer, {
-                    scale: 2, // 提高渲染比例
-                    pixelRatio: window.devicePixelRatio || 2, // 使用设备像素比
-                    useCORS: true, // 启用跨域资源共享
-                    allowTaint: true, // 允许污染画布
-                    backgroundColor: '#ffffff' // 确保背景为白色
-                });
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new window.jspdf.jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: 'A4',
-                    compress: false
-                });
-
-                const imgWidth = 210 - 20; // A4 width minus margins
-                const pageHeight = 297 - 20; // A4 height minus margins
-                // 由于我们使用了高分辨率画布，需要按比例调整高度
-                const imgHeight = (canvas.height * (210 - 20)) / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 10;
-
-                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight, null, 'FAST'); // 使用快速插值
-                heightLeft -= pageHeight;
-
-                // 如果内容超过一页，添加新页
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight, null, 'FAST');
-                    heightLeft -= pageHeight;
-                }
-
-                // 获取PDF的二进制数据
-                const pdfBlob = pdf.output('blob');
-                const pdfArrayBuffer = await pdfBlob.arrayBuffer();
-                const pdfUint8Array = new Uint8Array(pdfArrayBuffer);
-
-                // 如果设置了文件名，则保存到同级目录，否则提示用户选择保存位置
-                if (fileName) {
-                    // 从当前文件路径获取目录和文件名
-                    const pathParts = fileName.split('/');
-                    const fileBaseName = pathParts[pathParts.length - 1].replace('.json', '.pdf');
-                    const pdfPath = fileName.replace(/\.json$/, '.pdf');
-
-                    // 使用Tauri的invoke命令保存PDF文件
-                    try {
-                        const result = await invoke("save_pdf_file", {
-                            path: pdfPath,
-                            pdfData: Array.from(pdfUint8Array)
+            // 渲染数学公式
+            const mathElements = pdfContainer.querySelectorAll("[data-math]");
+            mathElements.forEach((mathNode) => {
+                const mathContent = decodeURIComponent(
+                    mathNode.getAttribute("data-math")
+                );
+                try {
+                    // 渲染数学公式
+                    if (mathNode.classList.contains("katex-block")) {
+                        katex.render(mathContent, mathNode, {
+                            throwOnError: false,
+                            displayMode: true,
+                            output: 'html'
                         });
-                        console.log(result);
-                    } catch (error) {
-                        console.error("Error saving PDF:", error);
-                        alert("Error saving PDF: " + error.message);
+                    } else {
+                        katex.render(mathContent, mathNode, {
+                            throwOnError: false,
+                            displayMode: false,
+                            output: 'html'
+                        });
                     }
-                } else {
-                    // 如果没有当前文件，提示用户选择保存位置
-                    const newName = await window.__TAURI__.dialog.save({
-                        filters: [{
-                            name: "PDF Files",
-                            extensions: ["pdf"]
-                        }]
+                } catch (error) {
+                    console.error("KaTeX rendering error in PDF generation:", error);
+                }
+            });
+
+            // 等待公式渲染完成
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // 使用 html2canvas 和 jsPDF 生成 PDF
+            setTimeout(async () => {
+                try {
+                    const canvas = await html2canvas(pdfContainer, {
+                        scale: 2, // 提高渲染比例
+                        pixelRatio: window.devicePixelRatio || 2, // 使用设备像素比
+                        useCORS: true, // 启用跨域资源共享
+                        allowTaint: true, // 允许污染画布
+                        backgroundColor: '#ffffff' // 确保背景为白色
+                    });
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new window.jspdf.jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: 'A4',
+                        compress: false
                     });
 
-                    if (newName) {
+                    const imgWidth = 210 - 20; // A4 width minus margins
+                    const pageHeight = 297 - 20; // A4 height minus margins
+                    // 由于我们使用了高分辨率画布，需要按比例调整高度
+                    const imgHeight = (canvas.height * (210 - 20)) / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 10;
+
+                    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight, null, 'FAST'); // 使用快速插值
+                    heightLeft -= pageHeight;
+
+                    // 如果内容超过一页，添加新页
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight, null, 'FAST');
+                        heightLeft -= pageHeight;
+                    }
+
+                    // 获取PDF的二进制数据
+                    const pdfBlob = pdf.output('blob');
+                    const pdfArrayBuffer = await pdfBlob.arrayBuffer();
+                    const pdfUint8Array = new Uint8Array(pdfArrayBuffer);
+
+                    // 如果设置了文件名，则保存到同级目录，否则提示用户选择保存位置
+                    if (fileName) {
+                        // 从当前文件路径获取目录和文件名
+                        const pathParts = fileName.split('/');
+                        const fileBaseName = pathParts[pathParts.length - 1].replace('.json', '.pdf');
+                        const pdfPath = fileName.replace(/\.json$/, '.pdf');
+
+                        // 使用Tauri的invoke命令保存PDF文件
                         try {
                             const result = await invoke("save_pdf_file", {
-                                path: newName,
-                                pdf_data: Array.from(pdfUint8Array)
+                                path: pdfPath,
+                                pdfData: Array.from(pdfUint8Array)
                             });
                             console.log(result);
-                            alert(`PDF saved successfully to: ${newName}`);
+                            showSuccess("PDF exported successfully!");
                         } catch (error) {
                             console.error("Error saving PDF:", error);
-                            alert("Error saving PDF: " + error.message);
+                            showError("Error saving PDF: " + error.message);
+                        }
+                    } else {
+                        // 如果没有当前文件，提示用户选择保存位置
+                        const newName = await window.__TAURI__.dialog.save({
+                            filters: [{
+                                name: "PDF Files",
+                                extensions: ["pdf"]
+                            }]
+                        });
+
+                        if (newName) {
+                            try {
+                                const result = await invoke("save_pdf_file", {
+                                    path: newName,
+                                    pdf_data: Array.from(pdfUint8Array)
+                                });
+                                console.log(result);
+                                showSuccess("PDF exported successfully!");
+                            } catch (error) {
+                                console.error("Error saving PDF:", error);
+                                showError("Error saving PDF: " + error.message);
+                            }
+                        } else {
+                            showInfo("PDF export cancelled.");
                         }
                     }
-                }
 
-                // 清理临时元素
-                document.body.removeChild(pdfContainer);
-            } catch (error) {
-                console.error("Error generating PDF:", error);
-                alert("Error generating PDF: " + error.message);
-            }
-        }, 500);
+                    // 清理临时元素
+                    document.body.removeChild(pdfContainer);
+                } catch (error) {
+                    console.error("Error generating PDF:", error);
+                    showError("Error generating PDF: " + error.message);
+                }
+            }, 500);
+        } catch (error) {
+            console.error("Error during PDF generation:", error);
+            showError("Error during PDF generation: " + error.message);
+        }
     };
 
     return React.createElement(
@@ -1144,5 +1177,122 @@ const App = () => {
     );
 };
 
+// 通知系统组件和API
+const notificationQueue = [];
+const notificationTimers = new Map(); // 存储通知定时器
+
+const NotificationSystem = () => {
+    const [notifications, setNotifications] = React.useState([]);
+
+    React.useEffect(() => {
+        const handleNewNotification = (notification) => {
+            const id = Date.now() + Math.random();
+            const newNotification = { ...notification, id, fadeOut: false };
+
+            setNotifications(prev => [...prev, newNotification]);
+
+            // 2秒后自动开始淡出
+            const timerId = setTimeout(() => {
+                setNotifications(prev =>
+                    prev.map(n =>
+                        n.id === newNotification.id ? { ...n, fadeOut: true } : n
+                    )
+                );
+
+                // 淡出动画完成后完全移除通知
+                setTimeout(() => {
+                    setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                }, 300); // 300ms 对应CSS中的过渡时间
+            }, 2000);
+
+            // 保存定时器ID以便于手动关闭时清理
+            notificationTimers.set(id, timerId);
+        };
+
+        // 监听通知队列
+        const processQueue = () => {
+            if (notificationQueue.length > 0) {
+                const notification = notificationQueue.shift();
+                handleNewNotification(notification);
+            }
+        };
+
+        const interval = setInterval(processQueue, 100);
+
+        return () => {
+            clearInterval(interval);
+            // 清理所有剩余的定时器
+            notificationTimers.forEach(timer => clearTimeout(timer));
+        };
+    }, []);
+
+    const removeNotification = (id) => {
+        // 清除定时器
+        if (notificationTimers.has(id)) {
+            clearTimeout(notificationTimers.get(id));
+            notificationTimers.delete(id);
+        }
+
+        // 先添加淡出效果
+        setNotifications(prev =>
+            prev.map(n =>
+                n.id === id ? { ...n, fadeOut: true } : n
+            )
+        );
+
+        // 淡出动画完成后移除通知
+        setTimeout(() => {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        }, 300);
+    };
+    return React.createElement(
+        "div",
+        { className: "notification-container" },
+        notifications.map(notification =>
+            React.createElement(
+                "div",
+                {
+                    className: `notification ${notification.type || 'info'} ${notification.fadeOut ? 'fade-out' : ''}`,
+                    key: notification.id
+                },
+                React.createElement(
+                    "div",
+                    { className: "notification-content" },
+                    notification.message
+                ),
+                React.createElement(
+                    "button",
+                    {
+                        className: "notification-close",
+                        onClick: () => removeNotification(notification.id)
+                    },
+                    "×"
+                )
+            )
+        )
+    );
+};
+
+// 通知API函数
+const showNotification = (message, type = 'info') => {
+    notificationQueue.push({ message, type });
+};
+
+const showSuccess = (message) => showNotification(message, 'success');
+const showError = (message) => showNotification(message, 'error');
+const showWarning = (message) => showNotification(message, 'warning');
+const showInfo = (message) => showNotification(message, 'info');
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(React.createElement(App));
+
+// 渲染应用和通知系统
+const AppWithNotifications = () => {
+    return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(App),
+        React.createElement(NotificationSystem)
+    );
+};
+
+root.render(React.createElement(AppWithNotifications));
