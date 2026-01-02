@@ -72,7 +72,6 @@ const fullMarkdownParser = (text) => {
 
     // 替换<math>标签为实际的数学公式渲染
     mathPatterns.forEach((item) => {
-        console.log(item);
         const regex = new RegExp(`<math\\s+type="${item.type}"\\s+id="${item.placeholder}">([^<]*)</math>`, "g");
 
         // 根据类型渲染数学公式
@@ -138,11 +137,21 @@ const TreeNode = ({
     const nodeRef = React.useRef(null);
     const textareaRef = React.useRef(null);
 
-    // 自适应 textarea 高度
+    // 自适应 textarea 高度，防止页面跳动
     const adjustTextareaHeight = () => {
         if (textareaRef.current) {
+            // 保存当前滚动位置
+            const savedScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const savedScrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+            // 临时固定高度，避免跳动
+            const previousHeight = textareaRef.current.style.height;
             textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+            const newHeight = textareaRef.current.scrollHeight + 'px';
+            textareaRef.current.style.height = newHeight;
+
+            // 恢复滚动位置
+            window.scrollTo(savedScrollLeft, savedScrollTop);
         }
     };
 
@@ -179,15 +188,30 @@ const TreeNode = ({
     // 当编辑状态改变或内容改变时，调整textarea高度
     React.useEffect(() => {
         if (isEditing && textareaRef.current) {
-            // 延迟执行，确保DOM已经更新
-            setTimeout(adjustTextareaHeight, 0);
+            // 使用 requestAnimationFrame 确保在浏览器重绘前调整高度，防止跳动
+            requestAnimationFrame(() => {
+                adjustTextareaHeight();
+            });
         }
     }, [isEditing, localContent]);
 
     const handleContentChange = (e) => {
         const newContent = e.target.value;
+        // 保存当前滚动位置
+        const textarea = e.target;
+        const scrollTop = textarea.scrollTop;
+        const scrollLeft = textarea.scrollLeft;
+
         setLocalContent(newContent);
         onUpdate(node.id, { content: newContent });
+
+        // 恢复滚动位置，防止页面跳动
+        setTimeout(() => {
+            if (textareaRef.current) {
+                textareaRef.current.scrollTop = scrollTop;
+                textareaRef.current.scrollLeft = scrollLeft;
+            }
+        }, 0);
     };
 
     const handleTitleChange = (e) => {
@@ -248,10 +272,16 @@ const TreeNode = ({
                     e.stopPropagation();
                     if (node.type === "leaf") {
                         setIsEditing(true);
-                        // 在下一次渲染后聚焦到文本框
+                        // 在下一次渲染后聚焦到文本框，同时保持当前滚动位置
                         setTimeout(() => {
                             if (textareaRef.current) {
+                                // 保存当前滚动位置
+                                const savedScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
                                 textareaRef.current.focus();
+
+                                // 恢复滚动位置，防止页面跳动
+                                window.scrollTo(0, savedScrollTop);
                             }
                         }, 0);
                     } else {
@@ -305,13 +335,36 @@ const TreeNode = ({
                                 ref: textareaRef,
                                 value: localContent,
                                 onChange: handleContentChange,
-                                onInput: adjustTextareaHeight,
+                                onInput: (e) => {
+                                    // 保存当前滚动位置
+                                    const textarea = e.target;
+                                    const scrollTop = textarea.scrollTop;
+                                    const scrollLeft = textarea.scrollLeft;
+
+                                    // 调整高度
+                                    adjustTextareaHeight();
+
+                                    // 恢复滚动位置，防止页面跳动
+                                    setTimeout(() => {
+                                        if (textareaRef.current) {
+                                            textareaRef.current.scrollTop = scrollTop;
+                                            textareaRef.current.scrollLeft = scrollLeft;
+                                        }
+                                    }, 0);
+                                },
                                 className:
                                     "w-full min-h-20 p-3 border-2 border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-500",
                                 placeholder: "Write markdown here...",
                                 onBlur: (e) => {
                                     e.stopPropagation();
+                                    // 保存滚动位置
+                                    const savedScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                                    const savedScrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
                                     setIsEditing(false);
+
+                                    // 恢复滚动位置
+                                    window.scrollTo(savedScrollLeft, savedScrollTop);
                                 }
                             })
                             : React.createElement("div", {
@@ -456,7 +509,13 @@ const TreeNode = ({
                                                 // 如果切换到编辑状态，设置焦点
                                                 if (newEditingState && textareaRef.current) {
                                                     setTimeout(() => {
+                                                        // 保存当前滚动位置
+                                                        const savedScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
                                                         textareaRef.current.focus();
+
+                                                        // 恢复滚动位置，防止页面跳动
+                                                        window.scrollTo(0, savedScrollTop);
                                                     }, 0);
                                                 }
                                             },
@@ -569,11 +628,16 @@ const TreeNode = ({
                                         // 如果切换到编辑状态，设置焦点
                                         if (newEditingState && textareaRef.current) {
                                             setTimeout(() => {
+                                                // 保存当前滚动位置
+                                                const savedScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
                                                 textareaRef.current.focus();
+
+                                                // 恢复滚动位置，防止页面跳动
+                                                window.scrollTo(0, savedScrollTop);
                                             }, 0);
                                         }
-                                    },
-                                    className: `px-2 py-1 text-xs rounded ${isEditing
+                                    }, className: `px-2 py-1 text-xs rounded ${isEditing
                                         ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
                                         : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
                                         }`,
