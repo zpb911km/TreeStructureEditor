@@ -23,17 +23,6 @@ const fullMarkdownParser = (text) => {
     const mathPatterns = [];
     let mathIndex = 0;
 
-    // 匹配行内数学公式 $...$
-    protectedText = protectedText.replace(
-        /\$([^$]+?)\$/g,
-        (match, content) => {
-            const placeholder = `MATH_INLINE_${mathIndex}`;
-            mathPatterns.push({ placeholder, content, type: "inline" });
-            mathIndex++;
-            return `$${placeholder}$`;
-        }
-    );
-
     // 匹配块级数学公式 $$...$$
     protectedText = protectedText.replace(
         /\$\$([^$]+?)\$\$/g,
@@ -41,20 +30,50 @@ const fullMarkdownParser = (text) => {
             const placeholder = `MATH_BLOCK_${mathIndex}`;
             mathPatterns.push({ placeholder, content, type: "block" });
             mathIndex++;
-            return `$$${placeholder}$$`;
+            return `<math type="block" id="${placeholder}">${content}</math>`;
+        }
+    );
+
+    // 匹配行内数学公式 $...$
+    protectedText = protectedText.replace(
+        /\$([^$]+?)\$/g,
+        (match, content) => {
+            const placeholder = `MATH_INLINE_${mathIndex}`;
+            mathPatterns.push({ placeholder, content, type: "inline" });
+            mathIndex++;
+            return `<math type="inline" id="${placeholder}">${content}</math>`;
+        }
+    );
+
+    // 匹配块级数学公式 \[...\]
+    protectedText = protectedText.replace(
+        /\\\[([^$]+?)\\\]/g,
+        (match, content) => {
+            const placeholder = `MATH_BLOCK_${mathIndex}`;
+            mathPatterns.push({ placeholder, content, type: "block" });
+            mathIndex++;
+            return `<math type="block" id="${placeholder}">${content}</math>`;
+        }
+    );
+
+    // 匹配行内数学公式 \(...\)
+    protectedText = protectedText.replace(
+        /\\\(([^$]+?)\\\)/g,
+        (match, content) => {
+            const placeholder = `MATH_INLINE_${mathIndex}`;
+            mathPatterns.push({ placeholder, content, type: "inline" });
+            mathIndex++;
+            return `<math type="inline" id="${placeholder}">${content}</math>`;
         }
     );
 
     // 解析 Markdown
     let html = marked.parse(protectedText);
 
-    // 替换占位符为实际的数学公式渲染
+    // 替换<math>标签为实际的数学公式渲染
     mathPatterns.forEach((item) => {
-        const escapedPlaceholder = item.placeholder.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&"
-        );
-        const regex = new RegExp(`\\$\\$?${escapedPlaceholder}\\$\\$?`, "g");
+        console.log(item);
+        const regex = new RegExp(`<math\\s+type="${item.type}"\\s+id="${item.placeholder}">([^<]*)</math>`, "g");
 
         // 根据类型渲染数学公式
         let mathElement;
@@ -608,8 +627,15 @@ const initialTree = {
                     type: "leaf",
                     title: "Features",
                     content:
-                        "## Core Features\n\n- **Real-time rendering** of markdown\n- Tree structure with visual connections\n- File saving/loading\n- Intuitive node management\n- formulars $ E=mc^2 $\n\n> Perfect for organizing complex documents",
+                        "## Core Features\n\n- **Real-time rendering** of markdown\n- Tree structure with visual connections\n- File saving/loading\n- Intuitive node management\n- formulars\n\n> Perfect for organizing complex documents",
                 },
+                {
+                    id: generateId(),
+                    type: "leaf",
+                    title: "Every math formula",
+                    content:
+                        "## Math formulas\n\n- $ E=mc^2 $\n- $ \\frac{d}{dx}f(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h} $ \n\n ## math block\n\n$$ \\int_a^b f(x) dx $$\n\n ",
+                }
             ],
         },
     ],
@@ -1033,7 +1059,7 @@ const App = () => {
                             try {
                                 const result = await invoke("save_pdf_file", {
                                     path: newName,
-                                    pdf_data: Array.from(pdfUint8Array)
+                                    pdfData: Array.from(pdfUint8Array)
                                 });
                                 console.log(result);
                                 showSuccess("PDF exported successfully!");
