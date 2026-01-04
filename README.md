@@ -34,4 +34,4 @@ win: 下载压缩包，解压后直接运行可执行文件
 
 linux/android: 下载安装包，安装后运行
 
-dev: 克隆项目，安装tauri-cli，运行`cargo-tauri dev`命令
+dev: 克隆项目，安装pnpm，运行`pnpm install`安装依赖，然后运行`pnpm run tauri:dev`命令
