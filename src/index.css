@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.markdown-preview h1 {
+  font-size: 1.8rem;
+  color: #1e40af;
+  margin-bottom: 0.5rem;
+}
+.markdown-preview h2 {
+  font-size: 1.5rem;
+  color: #1d4ed8;
+  margin: 1rem 0 0.5rem;
+}
+.markdown-preview h3 {
+  font-size: 1.25rem;
+  color: #1e40af;
+  margin: 0.8rem 0 0.4rem;
+}
+.markdown-preview p {
+  margin: 0.8rem 0;
+  line-height: 1.6;
+  color: #334155;
+}
+.markdown-preview strong {
+  color: #1e3a8a;
+  font-weight: 600;
+}
+.markdown-preview em {
+  color: #0f172a;
+  font-style: italic;
+}
+.markdown-preview ul {
+  margin: 0.8rem 0;
+  padding-left: 1.5rem;
+}
+.markdown-preview li {
+  margin: 0.3rem 0;
+  line-height: 1.6;
+  color: #475569;
+}
+.markdown-preview blockquote {
+  border-left: 3px solid #3b82f6;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #1e3a8a;
+  font-style: italic;
+}
+.markdown-preview br {
+  content: "";
+  display: block;
+  margin: 0.2rem 0;
+}
+
+/* 响应式下拉菜单样式 */
+.dropdown-content {
+  min-width: 120px;
+}
+
+/* 在小屏幕上的节点样式调整 */
+@media (max-width: 767px) {
+  .node-container {
+    padding: 0.5rem !important;
+  }
+
+  .tree-node {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .node-content {
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .node-actions {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+  }
+}
+
+/* 通知栏样式 */
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 400px;
+}
+
+.notification {
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  min-width: 300px;
+  max-width: 100%;
+  animation: slideInRight 0.3s ease-out;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.notification.success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.notification.error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.notification.warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+}
+
+.notification.info {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
+.notification-content {
+  flex: 1;
+  padding-right: 10px;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-close:hover {
+  opacity: 0.7;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification.fade-out {
+  opacity: 0;
+  transform: translateX(100%);
+}
