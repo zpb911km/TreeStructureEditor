@@ -1,65 +1,69 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import type { Notification } from '../types'
-import { notificationQueue, notificationTimers } from '../utils/notifications'
+import { ref, onMounted, onUnmounted } from "vue";
+import type { Notification } from "../types";
+import { notificationQueue, notificationTimers } from "../utils/notifications";
 
-const notifications = ref<Notification[]>([])
+const notifications = ref<Notification[]>([]);
 
 const handleNewNotification = (notification: Notification): void => {
-  const newNotification = { ...notification, fadeOut: false }
-  notifications.value.push(newNotification)
+  const newNotification = { ...notification, fadeOut: false };
+  notifications.value.push(newNotification);
 
   const timerId = setTimeout(() => {
-    const index = notifications.value.findIndex((n) => n.id === newNotification.id)
+    const index = notifications.value.findIndex(
+      (n) => n.id === newNotification.id,
+    );
     if (index !== -1) {
-      notifications.value[index].fadeOut = true
+      notifications.value[index].fadeOut = true;
     }
 
     setTimeout(() => {
-      notifications.value = notifications.value.filter((n) => n.id !== newNotification.id)
-    }, 300)
-  }, 2000)
+      notifications.value = notifications.value.filter(
+        (n) => n.id !== newNotification.id,
+      );
+    }, 300);
+  }, 2000);
 
-  notificationTimers.set(newNotification.id, timerId)
-}
+  notificationTimers.set(newNotification.id, timerId);
+};
 
 const processQueue = (): void => {
   if (notificationQueue.length > 0) {
-    const notification = notificationQueue.shift()
+    const notification = notificationQueue.shift();
     if (notification) {
-      handleNewNotification(notification)
+      handleNewNotification(notification);
     }
   }
-}
+};
 
-let interval: number | null = null
+let interval: number | null = null;
 
 onMounted(() => {
-  interval = window.setInterval(processQueue, 100)
-})
+  interval = window.setInterval(processQueue, 100);
+});
 
 onUnmounted(() => {
   if (interval !== null) {
-    clearInterval(interval)
+    clearInterval(interval);
   }
-  notificationTimers.forEach((timer) => clearTimeout(timer))
-})
+  notificationTimers.forEach((timer) => clearTimeout(timer));
+});
 
 const removeNotification = (id: number): void => {
   if (notificationTimers.has(id)) {
-    clearTimeout(notificationTimers.get(id)!)
-    notificationTimers.delete(id)
+    clearTimeout(notificationTimers.get(id)!);
+    notificationTimers.delete(id);
   }
 
-  const index = notifications.value.findIndex((n) => n.id === id)
+  const index = notifications.value.findIndex((n) => n.id === id);
   if (index !== -1) {
-    notifications.value[index].fadeOut = true
+    notifications.value[index].fadeOut = true;
   }
 
   setTimeout(() => {
-    notifications.value = notifications.value.filter((n) => n.id !== id)
-  }, 300)
-}
+    notifications.value = notifications.value.filter((n) => n.id !== id);
+  }, 300);
+};
 </script>
 
 <template>
@@ -68,7 +72,10 @@ const removeNotification = (id: number): void => {
       v-for="notification in notifications"
       :key="notification.id"
       class="notification"
-      :class="[notification.type || 'info', { 'fade-out': notification.fadeOut }]"
+      :class="[
+        notification.type || 'info',
+        { 'fade-out': notification.fadeOut },
+      ]"
     >
       <div class="notification-content">
         {{ notification.message }}
@@ -84,5 +91,5 @@ const removeNotification = (id: number): void => {
 </template>
 
 <style scoped>
-@import '../index.css';
+@import "../index.css";
 </style>

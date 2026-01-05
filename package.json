@@ -9,13 +9,17 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "format": "prettier --write ./src ./src-tauri/src",
+    "format:check": "prettier --check ./src ./src-tauri/src"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-dialog": "^2.4.2",
     "katex": "^0.16.11",
     "marked": "^15.0.6",
+    "monaco-editor": "^0.55.1",
+    "prettier": "^3.7.4",
     "vue": "^3.5.13"
   },
   "devDependencies": {
