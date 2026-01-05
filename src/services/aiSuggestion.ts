@@ -138,8 +138,13 @@ class AISuggestionService {
       // 清理建议文本
       let cleaned = this.cleanSuggestion(suggestion || '');
       // 删除suggestion前方重复的beforeCursor
-      if (beforeCursor.endsWith(cleaned)) {
-        cleaned = cleaned.substring(beforeCursor.length);
+      console.log(cleaned, beforeCursor, cleaned.replace(beforeCursor, ''));
+      try {
+        if (cleaned.startsWith(beforeCursor)) {
+          cleaned = cleaned.replace(beforeCursor, '');
+        }
+      } catch (error) {
+        console.error('[AISuggestion] Error cleaning suggestion:', error);
       }
       console.log('[AISuggestion] Cleaned suggestion', { cleaned });
       return cleaned;
@@ -160,22 +165,22 @@ class AISuggestionService {
     const contextLines = lines.slice(contextStart, contextEnd).join('\n');
 
     // 优化:简化提示词格式
-    return `${contextLines}\n\n补全: "${beforeCursor}"之后的文本:`;
+    return `${contextLines}\n\n补全: "${beforeCursor}"之后的文本。(注意开头不要重复${beforeCursor})`;
   }
 
   /**
    * 清理建议文本
    */
   private cleanSuggestion(suggestion: string): string {
-    // 移除常见的 markdown 代码块标记
-    suggestion = suggestion.replace(/^```\w*\n?/gm, '');
-    suggestion = suggestion.replace(/```$/gm, '');
+    // // 移除常见的 markdown 代码块标记
+    // suggestion = suggestion.replace(/^```\w*\n?/gm, '');
+    // suggestion = suggestion.replace(/```$/gm, '');
     
-    // 移除引号
-    suggestion = suggestion.replace(/^["']|["']$/g, '');
+    // // 移除引号
+    // suggestion = suggestion.replace(/^["']|["']$/g, '');
     
-    // 移除开头的换行
-    suggestion = suggestion.replace(/^\n+/, '');
+    // // 移除开头的换行
+    // suggestion = suggestion.replace(/^\n+/, '');
     
     return suggestion;
   }
@@ -210,6 +215,16 @@ class AISuggestionService {
     this.config = { ...this.config, ...config };
     console.log('[AISuggestion] Config updated', { newConfig: this.config });
   }
+
+  /**
+   * 重新加载配置并清空缓存
+   */
+  reloadConfig(config: AISuggestionConfig): void {
+    console.log('[AISuggestion] Reloading config', { newConfig: config });
+    this.config = config;
+    this.cache.clear();
+    console.log('[AISuggestion] Config reloaded and cache cleared');
+  }
 }
 
 // 导出单例实例
@@ -230,4 +245,15 @@ export function initAISuggestionService(config: AISuggestionConfig): AISuggestio
 export function getAISuggestionService(): AISuggestionService | null {
   console.log('[AISuggestion] getAISuggestionService called', { exists: !!aiSuggestionService });
   return aiSuggestionService;
+}
+
+export function reloadAISuggestionService(config: AISuggestionConfig): void {
+  console.log('[AISuggestion] reloadAISuggestionService called', { hasExisting: !!aiSuggestionService, config });
+  if (aiSuggestionService) {
+    aiSuggestionService.reloadConfig(config);
+    console.log('[AISuggestion] Service reloaded');
+  } else {
+    aiSuggestionService = new AISuggestionService(config);
+    console.log('[AISuggestion] Service created');
+  }
 }

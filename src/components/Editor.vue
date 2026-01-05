@@ -3,7 +3,7 @@
   <div ref="editorContainer" class="monaco-editor-container"></div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import * as monaco from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
@@ -15,9 +15,9 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "blur"]);
 
-const editorContainer = ref(null);
-let editorInstance = null;
-let inlineCompletionProvider = null;
+const editorContainer = ref<HTMLElement | null>(null);
+let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
+let inlineCompletionProvider: monaco.IDisposable | null = null;
 
 onMounted(() => {
   // 配置 Monaco Editor worker
@@ -25,12 +25,12 @@ onMounted(() => {
     getWorker: () => new editorWorker(),
   };
 
-  editorInstance = monaco.editor.create(editorContainer.value, {
+  editorInstance = monaco.editor.create(editorContainer.value!, {
     value: props.modelValue || "",
     language: "markdown",
     theme: "vs",
     minimap: { enabled: false },
-    fontSize: 14,
+    fontSize: 16,
     lineNumbers: "off",
     scrollBeyondLastLine: false,
     wordWrap: "on",
@@ -60,7 +60,7 @@ onMounted(() => {
 
   // 监听内容变化，实现双向绑定
   editorInstance.onDidChangeModelContent(() => {
-    emit("update:modelValue", editorInstance.getValue());
+    emit("update:modelValue", editorInstance!.getValue());
     adjustEditorHeight();
   });
 
@@ -144,7 +144,7 @@ const registerAISuggestionProvider = () => {
 };
 
 const adjustEditorHeight = () => {
-  if (!editorInstance) return;
+  if (!editorInstance || !editorContainer.value) return;
 
   const contentHeight = editorInstance.getContentHeight();
   const containerHeight = editorContainer.value.getBoundingClientRect().height;
@@ -160,7 +160,7 @@ const adjustEditorHeight = () => {
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (editorInstance && newValue !== editorInstance.getValue()) {
+    if (editorInstance && newValue !== undefined && newValue !== editorInstance.getValue()) {
       editorInstance.setValue(newValue);
     }
   },
@@ -191,8 +191,7 @@ onBeforeUnmount(() => {
 }
 
 .monaco-editor-container:focus-within {
-  ring: 2px;
-  ring-color: #34d399;
+  box-shadow: 0 0 0 2px #34d399;
   border-color: #34d399;
 }
 </style>

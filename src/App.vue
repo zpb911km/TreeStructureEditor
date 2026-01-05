@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import TreeNode from "./components/TreeNode.vue";
 import NotificationSystem from "./components/NotificationSystem.vue";
+import AISettings from "./components/AISettings.vue";
 import { generateId, initialTree } from "./utils/tree";
 import { exportMarkdownParser, renderMath } from "./utils/markdown";
 import { showSuccess, showError, showInfo } from "./utils/notifications";
@@ -12,6 +13,7 @@ import type { TreeNode as TreeNodeType } from "./types";
 
 const tree = ref<TreeNodeType>(JSON.parse(JSON.stringify(initialTree)));
 const fileName = ref<string | null>(null);
+const showAISettings = ref(false);
 
 const updateNode = (id: string, updates: Partial<TreeNodeType>): void => {
   const updateNodeRecursively = (node: TreeNodeType): TreeNodeType => {
@@ -349,21 +351,21 @@ const generateHTML = async (): Promise<void> => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   setupAutoSave();
 
-  // 初始化 AI 建议服务
-  const aiConfig = {
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY || "",
-    baseURL: import.meta.env.VITE_OPENAI_BASE_URL || "",
-    model: import.meta.env.VITE_OPENAI_MODEL || ""
-  };
-
-  if (aiConfig.apiKey) {
-    console.log('[App] Initializing AI suggestion service');
-    initAISuggestionService(aiConfig);
-  } else {
-    console.warn('[App] No OpenAI API key provided. AI suggestions will not be available.');
+  // 初始化 AI 建议服务 - 从配置文件加载
+  try {
+    const configStr = await invoke<string>("load_ai_config");
+    if (configStr) {
+      const aiConfig = JSON.parse(configStr);
+      console.log('[App] Initializing AI suggestion service from config file');
+      initAISuggestionService(aiConfig);
+    } else {
+      console.warn('[App] No AI config found. AI suggestions will not be available.');
+    }
+  } catch (error) {
+    console.log('[App] No existing AI config found:', error);
   }
 
   // 初始渲染数学公式
@@ -412,6 +414,12 @@ onUnmounted(() => {
         >
           Export to HTML
         </button>
+        <button
+          class="px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium rounded-xl shadow-md hover:from-purple-600 hover:to-pink-700 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
+          @click="showAISettings = !showAISettings"
+        >
+          {{ showAISettings ? 'close' : 'AI API Settings' }}
+        </button>
       </div>
 
       <div class="bg-white rounded-xl shadow-md p-4 flex-1">
@@ -426,7 +434,11 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="tree">
+    <!-- AI设置页面 -->
+    <AISettings v-if="showAISettings" />
+
+    <!-- 树形编辑器 -->
+    <div :hidden="showAISettings" class="tree">
       <ul class="list-none p-0 m-0">
         <TreeNode
           :node="tree"
