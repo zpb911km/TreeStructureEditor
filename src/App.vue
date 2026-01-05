@@ -397,21 +397,19 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-200">
-      <div class="tree">
-        <ul class="list-none p-0 m-0">
-          <TreeNode
-            :node="tree"
-            :parent-children="[tree]"
-            :node-index="0"
-            :level="0"
-            @update="updateNode"
-            @delete="deleteNode"
-            @add-child="addChildNode"
-            @move="moveNode"
-          />
-        </ul>
-      </div>
+    <div class="tree">
+      <ul class="list-none p-0 m-0">
+        <TreeNode
+          :node="tree"
+          :parent-children="[tree]"
+          :node-index="0"
+          :level="0"
+          @update="updateNode"
+          @delete="deleteNode"
+          @add-child="addChildNode"
+          @move="moveNode"
+        />
+      </ul>
     </div>
 
     <footer class="mt-12 text-center text-slate-500 text-sm">
