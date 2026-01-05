@@ -5,6 +5,7 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   root: 'src',
+  envDir: '..',
   plugins: [vue()],
   clearScreen: false,
   server: {

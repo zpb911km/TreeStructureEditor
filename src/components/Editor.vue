@@ -7,6 +7,7 @@
 import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import * as monaco from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+import { getAISuggestionService } from "../services/aiSuggestion";
 
 const props = defineProps({
   modelValue: String,
@@ -16,6 +17,7 @@ const emit = defineEmits(["update:modelValue", "blur"]);
 
 const editorContainer = ref(null);
 let editorInstance = null;
+let inlineCompletionProvider = null;
 
 onMounted(() => {
   // 配置 Monaco Editor worker
@@ -35,16 +37,26 @@ onMounted(() => {
     automaticLayout: true,
     padding: { top: 8, bottom: 8 },
     suggest: {
-      showKeywords: true,
-      showSnippets: true,
+      showKeywords: false,
+      showSnippets: false,
+      showStatusBar: true,
+      preview: true,
+      previewMode: 'subwordSmart'
     },
     bracketPairColorization: { enabled: true },
     autoClosingBrackets: "always",
     autoClosingQuotes: "always",
     autoSurround: "languageDefined",
+    quickSuggestions: false,
+    acceptSuggestionOnEnter: "on",
+    tabCompletion: "on",
+    suggestOnTriggerCharacters: false
   });
 
   editorInstance.focus();
+
+  // 注册 AI 建议提供者
+  registerAISuggestionProvider();
 
   // 监听内容变化，实现双向绑定
   editorInstance.onDidChangeModelContent(() => {
@@ -59,6 +71,77 @@ onMounted(() => {
 
   adjustEditorHeight();
 });
+
+/**
+ * 注册 AI 建议提供者
+ */
+const registerAISuggestionProvider = () => {
+  console.log('[Editor] Registering AI suggestion provider');
+  const aiService = getAISuggestionService();
+  if (!aiService) {
+    console.warn('[Editor] AI suggestion service not available');
+    return;
+  }
+
+  // 使用标准的代码补全而不是内联补全
+  inlineCompletionProvider = monaco.languages.registerCompletionItemProvider('markdown', {
+    provideCompletionItems: async (model, position, context, token) => {
+      try {
+        console.log('[Editor] provideCompletionItems invoked', {
+          position,
+          triggerKind: context.triggerKind
+        });
+
+        // 如果请求已被取消,直接返回
+        if (token.isCancellationRequested) {
+          console.log('[Editor] Request cancelled before API call');
+          return { suggestions: [] };
+        }
+
+        const suggestion = await aiService.getSuggestion(
+          model.getValue(),
+          { lineNumber: position.lineNumber, column: position.column }
+        );
+
+        if (!suggestion) {
+          console.log('[Editor] No suggestion available');
+          return { suggestions: [] };
+        }
+
+        console.log('[Editor] Returning suggestion', { suggestion });
+
+        return {
+          suggestions: [
+            {
+              label: 'AI Suggestion',
+              kind: monaco.languages.CompletionItemKind.Text,
+              insertText: suggestion,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              detail: 'AI-generated suggestion',
+              documentation: {
+                value: suggestion,
+                isTrusted: true,
+                supportHtml: false
+              },
+              range: {
+                startLineNumber: position.lineNumber,
+                startColumn: position.column,
+                endLineNumber: position.lineNumber,
+                endColumn: position.column
+              },
+              sortText: '0', // 确保排在最前面
+              preselect: true // 自动预选
+            }
+          ]
+        };
+      } catch (error) {
+        console.error('[Editor] Completion error:', error);
+        return { suggestions: [] };
+      }
+    }
+  });
+  console.log('[Editor] AI suggestion provider registered successfully');
+};
 
 const adjustEditorHeight = () => {
   if (!editorInstance) return;
@@ -84,9 +167,18 @@ watch(
 );
 
 onBeforeUnmount(() => {
-  if (editorInstance) {
-    editorInstance.dispose();
+  console.log('[Editor] onBeforeUnmount - Cleaning up resources');
+  if (inlineCompletionProvider) {
+    console.log('[Editor] Disposing inlineCompletionProvider');
+    inlineCompletionProvider.dispose();
+    inlineCompletionProvider = null;
   }
+  if (editorInstance) {
+    console.log('[Editor] Disposing editorInstance');
+    editorInstance.dispose();
+    editorInstance = null;
+  }
+  console.log('[Editor] Cleanup complete');
 });
 </script>
 

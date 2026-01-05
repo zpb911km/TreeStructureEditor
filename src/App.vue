@@ -7,6 +7,7 @@ import NotificationSystem from "./components/NotificationSystem.vue";
 import { generateId, initialTree } from "./utils/tree";
 import { exportMarkdownParser, renderMath } from "./utils/markdown";
 import { showSuccess, showError, showInfo } from "./utils/notifications";
+import { initAISuggestionService } from "./services/aiSuggestion";
 import type { TreeNode as TreeNodeType } from "./types";
 
 const tree = ref<TreeNodeType>(JSON.parse(JSON.stringify(initialTree)));
@@ -350,6 +351,20 @@ const generateHTML = async (): Promise<void> => {
 
 onMounted(() => {
   setupAutoSave();
+
+  // 初始化 AI 建议服务
+  const aiConfig = {
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY || "",
+    baseURL: import.meta.env.VITE_OPENAI_BASE_URL || "",
+    model: import.meta.env.VITE_OPENAI_MODEL || ""
+  };
+
+  if (aiConfig.apiKey) {
+    console.log('[App] Initializing AI suggestion service');
+    initAISuggestionService(aiConfig);
+  } else {
+    console.warn('[App] No OpenAI API key provided. AI suggestions will not be available.');
+  }
 
   // 初始渲染数学公式
   nextTick(() => {
