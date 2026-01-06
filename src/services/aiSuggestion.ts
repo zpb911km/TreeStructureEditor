@@ -34,8 +34,6 @@ interface CompletionResponse {
 
 class AISuggestionService {
   private config: AISuggestionConfig;
-  private cache: Map<string, string> = new Map();
-  private cacheTimeout: number = 5 * 60 * 1000; // 5分钟缓存
 
   constructor(config: AISuggestionConfig) {
     this.config = config;
@@ -48,27 +46,8 @@ class AISuggestionService {
     content: string,
     position: { lineNumber: number; column: number }
   ): Promise<string | null> {
-    console.log('[AISuggestion] getSuggestion called', { position, contentLength: content.length });
-    const cacheKey = this.getCacheKey(content, position);
-    const cached = this.cache.get(cacheKey);
-
-    if (cached) {
-      console.log('[AISuggestion] Returning cached suggestion', { cacheKey });
-      return cached;
-    }
-
     try {
-      console.log('[AISuggestion] Calling AI API...', { content });
       const suggestion = await this.callAI(content, position);
-      console.log('[AISuggestion] AI API response received', { suggestion: suggestion || 'null' });
-
-      if (suggestion) {
-        this.cache.set(cacheKey, suggestion);
-        // 清理过期缓存
-        setTimeout(() => this.cache.delete(cacheKey), this.cacheTimeout);
-        console.log('[AISuggestion] Suggestion cached', { cacheKey });
-      }
-
       return suggestion;
     } catch (error) {
       console.error('[AISuggestion] Error in getSuggestion:', error);
@@ -83,15 +62,12 @@ class AISuggestionService {
     content: string,
     position: { lineNumber: number; column: number }
   ): Promise<string | null> {
-    console.log('[AISuggestion] callAI started', { position });
     const lines = content.split('\n');
     const currentLine = lines[position.lineNumber - 1] || '';
     const beforeCursor = currentLine.substring(0, position.column - 1);
-    console.log('[AISuggestion] Context extracted', { currentLine, beforeCursor });
 
     // 构建提示词
     const prompt = this.buildPrompt(content, beforeCursor, position.lineNumber);
-    console.log('[AISuggestion] Prompt built', { prompt: prompt });
 
     const requestBody: CompletionRequest = {
       model: this.config.model,
@@ -119,8 +95,6 @@ class AISuggestionService {
       body: JSON.stringify(requestBody)
     });
 
-    console.log('[AISuggestion] API response status', { status: response.status, ok: response.ok });
-
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[AISuggestion] API request failed', { status: response.status, errorText });
@@ -129,16 +103,12 @@ class AISuggestionService {
 
     const data: CompletionResponse = await response.json();
     showSuccess(`获取AI建议成功, 消耗${data.usage?.total_tokens} tokens`);
-    console.log('[AISuggestion] API response parsed', { data: data });
     
     if (data.choices && data.choices.length > 0) {
       const suggestion = data.choices[0].message.content?.trim();
-      console.log('[AISuggestion] Raw suggestion received', { suggestion });
-
       // 清理建议文本
       let cleaned = this.cleanSuggestion(suggestion || '');
       // 删除suggestion前方重复的beforeCursor
-      console.log(cleaned, beforeCursor, cleaned.replace(beforeCursor, ''));
       try {
         if (cleaned.startsWith(beforeCursor)) {
           cleaned = cleaned.replace(beforeCursor, '');
@@ -146,11 +116,8 @@ class AISuggestionService {
       } catch (error) {
         console.error('[AISuggestion] Error cleaning suggestion:', error);
       }
-      console.log('[AISuggestion] Cleaned suggestion', { cleaned });
       return cleaned;
     }
-
-    console.warn('[AISuggestion] No choices in API response');
     return null;
   }
 
@@ -186,44 +153,17 @@ class AISuggestionService {
   }
 
   /**
-   * 生成缓存键
-   */
-  private getCacheKey(content: string, position: { lineNumber: number; column: number }): string {
-    // 优化:只使用光标前 100 个字符,减少缓存键长度
-    const lines = content.split('\n');
-    const currentLine = lines[position.lineNumber - 1] || '';
-    const beforeCursor = currentLine.substring(0, Math.min(position.column - 1, 200));
-
-    // 优化:使用哈希或截断来避免过长的键
-    return `${position.lineNumber}:${position.column}:${beforeCursor}`;
-  }
-
-  /**
-   * 清空缓存
-   */
-  clearCache(): void {
-    const size = this.cache.size;
-    this.cache.clear();
-    console.log('[AISuggestion] Cache cleared', { previousSize: size });
-  }
-
-  /**
    * 更新配置
    */
   updateConfig(config: Partial<AISuggestionConfig>): void {
-    console.log('[AISuggestion] Updating config', { oldConfig: this.config, newConfig: config });
     this.config = { ...this.config, ...config };
-    console.log('[AISuggestion] Config updated', { newConfig: this.config });
   }
 
   /**
-   * 重新加载配置并清空缓存
+   * 重新加载配置
    */
   reloadConfig(config: AISuggestionConfig): void {
-    console.log('[AISuggestion] Reloading config', { newConfig: config });
     this.config = config;
-    this.cache.clear();
-    console.log('[AISuggestion] Config reloaded and cache cleared');
   }
 }
 
@@ -231,29 +171,22 @@ class AISuggestionService {
 let aiSuggestionService: AISuggestionService | null = null;
 
 export function initAISuggestionService(config: AISuggestionConfig): AISuggestionService {
-  console.log('[AISuggestion] initAISuggestionService called', { hasExisting: !!aiSuggestionService, config });
   if (!aiSuggestionService) {
     aiSuggestionService = new AISuggestionService(config);
-    console.log('[AISuggestion] Service created');
   } else {
     aiSuggestionService.updateConfig(config);
-    console.log('[AISuggestion] Service config updated');
   }
   return aiSuggestionService;
 }
 
 export function getAISuggestionService(): AISuggestionService | null {
-  console.log('[AISuggestion] getAISuggestionService called', { exists: !!aiSuggestionService });
   return aiSuggestionService;
 }
 
 export function reloadAISuggestionService(config: AISuggestionConfig): void {
-  console.log('[AISuggestion] reloadAISuggestionService called', { hasExisting: !!aiSuggestionService, config });
   if (aiSuggestionService) {
     aiSuggestionService.reloadConfig(config);
-    console.log('[AISuggestion] Service reloaded');
   } else {
     aiSuggestionService = new AISuggestionService(config);
-    console.log('[AISuggestion] Service created');
   }
 }

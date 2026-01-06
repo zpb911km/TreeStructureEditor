@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tse",
+  "productName": "TreeStructureEditor",
   "version": "1.1.0",
   "identifier": "com.zpb.tse",
   "build": {

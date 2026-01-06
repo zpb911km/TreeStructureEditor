@@ -252,6 +252,7 @@ const generateHTML = async (): Promise<void> => {
       const marginLeft = level * 10;
 
       if (node.type === "branch") {
+        html += `<div style="margin-left: ${marginLeft}px; border-left: 3px double #000;">`;
         html += `<div style="margin-left: ${marginLeft}px; margin-bottom: 10px; font-weight: bold; font-size: 1.2em;">`;
         html += `${node.title}`;
         html += "</div>";
@@ -263,8 +264,9 @@ const generateHTML = async (): Promise<void> => {
           });
           html += "</div>";
         }
+        html += "</div>";
       } else {
-        html += `<div style="margin-left: ${marginLeft}px; margin-bottom: 10px; padding-left: 10px; border-left: 2px solid #000;">`;
+        html += `<div style="margin-left: ${marginLeft}px; margin-bottom: 10px; padding-left: 10px; border-left: 1px solid #000;">`;
         const parsedContent = exportMarkdownParser(node.content || "");
         html += parsedContent;
         html += "</div>";
