@@ -46,6 +46,7 @@ class AISuggestionService {
     content: string,
     position: { lineNumber: number; column: number }
   ): Promise<string | null> {
+    console.log('[AISuggestion] getSuggestion called');
     try {
       const suggestion = await this.callAI(content, position);
       return suggestion;
@@ -67,7 +68,7 @@ class AISuggestionService {
     const beforeCursor = currentLine.substring(0, position.column - 1);
 
     // 构建提示词
-    const prompt = this.buildPrompt(content, beforeCursor, position.lineNumber);
+    const prompt = this.buildPrompt(content, position.lineNumber, position.column);
 
     const requestBody: CompletionRequest = {
       model: this.config.model,
@@ -82,7 +83,7 @@ class AISuggestionService {
         }
       ],
       temperature: 0.3,
-      max_tokens: 500, // 优化:降低到 150,通常足够短文本补全
+      max_tokens: 500,
       stream: false
     };
 
@@ -106,8 +107,7 @@ class AISuggestionService {
     
     if (data.choices && data.choices.length > 0) {
       const suggestion = data.choices[0].message.content?.trim();
-      // 清理建议文本
-      let cleaned = this.cleanSuggestion(suggestion || '');
+      let cleaned = suggestion || '';
       // 删除suggestion前方重复的beforeCursor
       try {
         if (cleaned.startsWith(beforeCursor)) {
@@ -124,34 +124,16 @@ class AISuggestionService {
   /**
    * 构建提示词
    */
-  private buildPrompt(content: string, beforeCursor: string, lineNumber: number): string {
+  private buildPrompt(content: string, lineNumber: number, column: number): string {
+    // 在content中插入"<光标位置>"作为提示
     const lines = content.split('\n');
-    const contextStart = Math.max(0, lineNumber - 10);
-    const contextEnd = Math.min(lines.length, lineNumber + 5);
-
-    const contextLines = lines.slice(contextStart, contextEnd).join('\n');
-
+    const beforeCursor = lines.slice(0, lineNumber - 1).join('\n') + '\n' + lines[lineNumber - 1].slice(0, column);
+    const afterCursor = lines[lineNumber - 1].slice(column) + '\n' + lines.slice(lineNumber).join('\n');
+    const shortBeforeCursor = beforeCursor.slice(beforeCursor.length - 500, beforeCursor.length);
+    const shortAfterCursor = afterCursor.slice(0, 500);
     // 优化:简化提示词格式
-    return `${contextLines}\n\n补全: "${beforeCursor}"之后的文本。(注意开头不要重复${beforeCursor})`;
+    return `${shortBeforeCursor}<光标位置>${shortAfterCursor}\n\n请在光标位置进行补全:`;
   }
-
-  /**
-   * 清理建议文本
-   */
-  private cleanSuggestion(suggestion: string): string {
-    // // 移除常见的 markdown 代码块标记
-    // suggestion = suggestion.replace(/^```\w*\n?/gm, '');
-    // suggestion = suggestion.replace(/```$/gm, '');
-    
-    // // 移除引号
-    // suggestion = suggestion.replace(/^["']|["']$/g, '');
-    
-    // // 移除开头的换行
-    // suggestion = suggestion.replace(/^\n+/, '');
-    
-    return suggestion;
-  }
-
   /**
    * 更新配置
    */
