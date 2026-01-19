@@ -22,7 +22,7 @@ const handleNewNotification = (notification: Notification): void => {
         (n) => n.id !== newNotification.id,
       );
     }, 300);
-  }, 2000);
+  }, 5000);
 
   notificationTimers.set(newNotification.id, timerId);
 };

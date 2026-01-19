@@ -153,23 +153,32 @@ const saveToFile = async (): Promise<void> => {
   const dataStr = JSON.stringify(tree.value, null, 2);
 
   try {
-    if (fileName.value === null) {
-      const newPath = await save({
-        defaultPath: "document.json",
-        filters: [{ name: "JSON", extensions: ["json"] }],
-      });
+    // 每次保存都重新选择文件位置，以获取正确的权限（特别是 Android）
+    const newPath = await save({
+      defaultPath: fileName.value || "document.json",
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
 
-      if (newPath === null) {
-        return;
-      }
-
-      fileName.value = newPath;
+    if (newPath === null) {
+      return;
     }
 
-    await invoke("save_file", {
-      path: fileName.value,
-      content: dataStr,
-    });
+    fileName.value = newPath;
+
+    // 检查是否为移动端 URI
+    if (fileName.value && (fileName.value.startsWith('content://') || fileName.value.startsWith('file://'))) {
+      // 移动端 URI：使用 tauri-plugin-fs 的 open 方法获取可写文件句柄
+      const { open } = await import('@tauri-apps/plugin-fs');
+      const file = await open(fileName.value, { write: true, truncate: true, create: true });
+      await file.write(new TextEncoder().encode(dataStr));
+      await file.close();
+    } else if (fileName.value) {
+      // 桌面端：使用 Rust 后端
+      await invoke("save_file", {
+        path: fileName.value,
+        content: dataStr,
+      });
+    }
 
     showSuccess("Document saved successfully!");
   } catch (error) {
@@ -192,9 +201,20 @@ const handleFileUpload = async (): Promise<void> => {
     const filePath = selected as string;
     fileName.value = filePath;
 
-    const fileContent = await invoke<string>("open_file", { path: filePath });
-    const parsedTree = JSON.parse(fileContent) as TreeNodeType;
-    tree.value = parsedTree;
+    // 检查是否为移动端 URI
+    if (filePath.startsWith('content://') || filePath.startsWith('file://')) {
+      // 移动端 URI：使用 tauri-plugin-fs 的 JavaScript API
+      const { readTextFile } = await import('@tauri-apps/plugin-fs');
+      const fileContent = await readTextFile(filePath);
+      const parsedTree = JSON.parse(fileContent) as TreeNodeType;
+      tree.value = parsedTree;
+    } else {
+      // 桌面端：使用 Rust 后端
+      const fileContent = await invoke<string>("open_file", { path: filePath });
+      const parsedTree = JSON.parse(fileContent) as TreeNodeType;
+      tree.value = parsedTree;
+    }
+
     showSuccess("Document opened successfully!");
 
     // 文件加载后渲染数学公式
@@ -203,7 +223,7 @@ const handleFileUpload = async (): Promise<void> => {
     });
   } catch (error) {
     console.error("Error reading or parsing file:", error);
-    showError("Failed to open document: " + (error as Error).message);
+    showError("Failed to open document: " + error);
   }
 };
 
@@ -212,10 +232,17 @@ let autoSaveTimer: number | null = null;
 const setupAutoSave = (): void => {
   if (!fileName.value) return;
 
+  // 移动端禁用自动保存，因为需要用户交互来获取文件写入权限
+  if (fileName.value.startsWith('content://') || fileName.value.startsWith('file://')) {
+    console.log("Auto-save is disabled on mobile due to permission requirements");
+    return;
+  }
+
   autoSaveTimer = window.setInterval(
     async () => {
       const dataStr = JSON.stringify(tree.value, null, 2);
       try {
+        // 桌面端：使用 Rust 后端
         await invoke("save_file", {
           path: fileName.value!,
           content: dataStr,
@@ -224,7 +251,7 @@ const setupAutoSave = (): void => {
         showSuccess("Document auto-saved successfully!");
       } catch (err) {
         console.error("Auto-save failed:", err);
-        showError("Auto-save failed: " + (err as Error).message);
+        showError("Auto-save failed: " + err);
       }
     },
     1000 * 60 * 1,
@@ -329,43 +356,41 @@ const generateHTML = async (): Promise<void> => {
 </body>
 </html>`;
 
-    if (fileName.value) {
-      const htmlPath = fileName.value.replace(/\.json$/, ".html");
-
-      try {
-        await invoke("save_file", {
-          path: htmlPath,
-          content: htmlContent,
-        });
-        showSuccess("HTML exported successfully!");
-      } catch (error) {
-        console.error("Error saving HTML:", error);
-        showError("Error saving HTML: " + (error as Error).message);
-      }
+    let htmlPath: string;
+    if (fileName.value && !(fileName.value.startsWith('content://') || fileName.value.startsWith('file://'))) {
+      htmlPath = fileName.value.replace(/\.json$/, ".html");
     } else {
       const newName = await save({
         defaultPath: "document.html",
         filters: [{ name: "HTML Files", extensions: ["html"] }],
       });
 
-      if (newName) {
-        try {
-          await invoke("save_file", {
-            path: newName,
-            content: htmlContent,
-          });
-          showSuccess("HTML exported successfully!");
-        } catch (error) {
-          console.error("Error saving HTML:", error);
-          showError("Error saving HTML: " + (error as Error).message);
-        }
-      } else {
+      if (!newName) {
         showInfo("HTML export cancelled.");
+        return;
       }
+      htmlPath = newName;
     }
+
+    // 检查是否为移动端 URI
+    if (htmlPath.startsWith('content://') || htmlPath.startsWith('file://')) {
+      // 移动端 URI：使用 tauri-plugin-fs 的 open 方法获取可写文件句柄
+      const { open } = await import('@tauri-apps/plugin-fs');
+      const file = await open(htmlPath, { write: true, truncate: true, create: true });
+      await file.write(new TextEncoder().encode(htmlContent));
+      await file.close();
+    } else {
+      // 桌面端：使用 Rust 后端
+      await invoke("save_file", {
+        path: htmlPath,
+        content: htmlContent,
+      });
+    }
+
+    showSuccess("HTML exported successfully!");
   } catch (error) {
     console.error("Error during HTML generation:", error);
-    showError("Error during HTML generation: " + (error as Error).message);
+    showError("Error during HTML generation: " + error);
   }
 };
 
@@ -383,6 +408,17 @@ onMounted(async () => {
       console.warn('[App] No AI config found. AI suggestions will not be available.');
     }
   } catch (error) {
+    try {
+      const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+      const configPath = `ai_api.json`;
+      const configStr = await readTextFile(configPath, { baseDir: BaseDirectory.AppConfig });
+      if (configStr) {
+        const aiConfig = JSON.parse(configStr);
+        initAISuggestionService(aiConfig);
+      }
+    } catch (error) {
+      console.log('[App] No existing AI config found:', error);
+    }
     console.log('[App] No existing AI config found:', error);
   }
 

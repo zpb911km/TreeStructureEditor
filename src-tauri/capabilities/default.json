@@ -8,6 +8,16 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "dialog:default"
+    "dialog:default",
+    "fs:default",
+    "fs:allow-write",
+    "fs:allow-write-file",
+    "fs:allow-write-text-file",
+    "fs:allow-read",
+    "fs:allow-read-file",
+    "fs:allow-read-text-file",
+    "fs:allow-open",
+    {"identifier": "fs:allow-open", "allow": [{"path": "$APPCONFIG"}]},
+    "fs:allow-appconfig-write"
   ]
 }

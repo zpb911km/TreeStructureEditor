@@ -30,6 +30,18 @@ const loadConfig = async () => {
       showSuccess("AI配置加载成功");
     }
   } catch (error) {
+    try {
+      const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+      const configPath = `ai_api.json`;
+      const configStr = await readTextFile(configPath, { baseDir: BaseDirectory.AppConfig });
+      if (configStr) {
+        const aiConfig = JSON.parse(configStr);
+        config.value = aiConfig;
+        showSuccess("AI配置加载成功");
+      }
+    } catch (error) {
+      console.log('[App] No existing AI config found:', error);
+    }
     console.log("No existing config found or error loading:", error);
   }
 };
@@ -60,7 +72,20 @@ const saveConfig = async () => {
     // 重新加载AI服务
     reloadAISuggestionService(config.value);
   } catch (error) {
-    showError("保存配置失败: " + (error as Error).message);
+    try {
+      const { open, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+      const configPath = `ai_api.json`;
+      const configStr = JSON.stringify(config.value);
+      const encoder = new TextEncoder();
+      const data = encoder.encode(configStr);
+      const file = await open(configPath, { create: true, write: true, baseDir: BaseDirectory.AppConfig });
+      await file.write(data);
+      await file.close();
+      showSuccess("AI配置保存成功");
+    } catch (error) {
+      console.log('[App] Error saving AI config:', error);
+      showError("保存配置失败: " + error);
+    }
   } finally {
     isSaving.value = false;
   }
