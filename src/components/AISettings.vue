@@ -1,14 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { showSuccess, showError } from "../utils/notifications";
-import { reloadAISuggestionService } from "../services/aiSuggestion";
+import { AIConfig } from "../types";
+import { loadAIConfig, saveAIConfig } from "../apis";
 
-interface AIConfig {
-  apiKey: string;
-  baseURL: string;
-  model: string;
-}
 
 const config = ref<AIConfig>({
   apiKey: "",
@@ -23,27 +18,13 @@ const isSaving = ref(false);
 
 // 加载配置
 const loadConfig = async () => {
-  try {
-    const configStr = await invoke<string>("load_ai_config");
-    if (configStr) {
-      config.value = JSON.parse(configStr);
-      showSuccess("AI配置加载成功");
+  loadAIConfig().then((ai_config) => {
+    if (ai_config) {
+      config.value = ai_config;
     }
-  } catch (error) {
-    try {
-      const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-      const configPath = `ai_api.json`;
-      const configStr = await readTextFile(configPath, { baseDir: BaseDirectory.AppConfig });
-      if (configStr) {
-        const aiConfig = JSON.parse(configStr);
-        config.value = aiConfig;
-        showSuccess("AI配置加载成功");
-      }
-    } catch (error) {
-      console.log('[App] No existing AI config found:', error);
-    }
-    console.log("No existing config found or error loading:", error);
-  }
+  }).catch((error) => {
+    showError("加载配置失败: " + error);
+  });
 };
 
 // 保存配置
@@ -64,31 +45,12 @@ const saveConfig = async () => {
   }
 
   isSaving.value = true;
-  try {
-    console.log("Saving config:", config.value);
-    await invoke("save_ai_config", { config: JSON.stringify(config.value) });
-    showSuccess("AI配置保存成功");
-
-    // 重新加载AI服务
-    reloadAISuggestionService(config.value);
-  } catch (error) {
-    try {
-      const { open, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-      const configPath = `ai_api.json`;
-      const configStr = JSON.stringify(config.value);
-      const encoder = new TextEncoder();
-      const data = encoder.encode(configStr);
-      const file = await open(configPath, { create: true, write: true, baseDir: BaseDirectory.AppConfig });
-      await file.write(data);
-      await file.close();
-      showSuccess("AI配置保存成功");
-    } catch (error) {
-      console.log('[App] Error saving AI config:', error);
-      showError("保存配置失败: " + error);
-    }
-  } finally {
+  saveAIConfig(config.value).then(() => {
     isSaving.value = false;
-  }
+  }).catch((error) => {
+    isSaving.value = false;
+    showError("保存配置失败: " + error);
+  });
 };
 
 // 测试API连接

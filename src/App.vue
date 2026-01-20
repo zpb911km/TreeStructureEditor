@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
-import { invoke } from "@tauri-apps/api/core";
-import { open, save } from "@tauri-apps/plugin-dialog";
 import TreeNode from "./components/TreeNode.vue";
 import NotificationSystem from "./components/NotificationSystem.vue";
 import AISettings from "./components/AISettings.vue";
@@ -10,9 +8,11 @@ import { exportMarkdownParser, renderMath } from "./utils/markdown";
 import { showSuccess, showError, showInfo } from "./utils/notifications";
 import { initAISuggestionService } from "./services/aiSuggestion";
 import type { TreeNode as TreeNodeType } from "./types";
+import { loadAIConfig, loadFile, outputFile, saveFile } from "./apis";
 
 const tree = ref<TreeNodeType>(JSON.parse(JSON.stringify(initialTree)));
-const fileName = ref<string | null>(null);
+const shortPath = ref<string | null>(null);
+const htmlOutputShortPath = ref<string | null>(null);
 const showAISettings = ref(false);
 
 const updateNode = (id: string, updates: Partial<TreeNodeType>): void => {
@@ -149,38 +149,19 @@ const moveNode = (id: string, direction: "up" | "down"): void => {
   }
 };
 
+const getShortPath = (): string => { 
+  // TODO
+  return "test/test.json"
+};
+
 const saveToFile = async (): Promise<void> => {
   const dataStr = JSON.stringify(tree.value, null, 2);
-
+  
   try {
-    // 每次保存都重新选择文件位置，以获取正确的权限（特别是 Android）
-    const newPath = await save({
-      defaultPath: fileName.value || "document.json",
-      filters: [{ name: "JSON", extensions: ["json"] }],
-    });
-
-    if (newPath === null) {
-      return;
+    if (!shortPath.value) {
+      shortPath.value = getShortPath();
     }
-
-    fileName.value = newPath;
-
-    // 检查是否为移动端 URI
-    if (fileName.value && (fileName.value.startsWith('content://') || fileName.value.startsWith('file://'))) {
-      // 移动端 URI：使用 tauri-plugin-fs 的 open 方法获取可写文件句柄
-      const { open } = await import('@tauri-apps/plugin-fs');
-      const file = await open(fileName.value, { write: true, truncate: true, create: true });
-      await file.write(new TextEncoder().encode(dataStr));
-      await file.close();
-    } else if (fileName.value) {
-      // 桌面端：使用 Rust 后端
-      await invoke("save_file", {
-        path: fileName.value,
-        content: dataStr,
-      });
-    }
-
-    showSuccess("Document saved successfully!");
+    saveFile(shortPath.value, dataStr);
   } catch (error) {
     console.error("Error saving file:", error);
     showError("Failed to save document: " + (error as Error).message);
@@ -189,32 +170,14 @@ const saveToFile = async (): Promise<void> => {
 
 const handleFileUpload = async (): Promise<void> => {
   try {
-    const selected = await open({
-      filters: [{ name: "TreeStructureEditor Files", extensions: ["json"] }],
-    });
-
-    if (selected === null) {
-      showInfo("File opening cancelled.");
+    shortPath.value = getShortPath();
+    const content = await loadFile(shortPath.value);
+    if (!content) {
+      showError("Failed to load document.");
       return;
     }
-
-    const filePath = selected as string;
-    fileName.value = filePath;
-
-    // 检查是否为移动端 URI
-    if (filePath.startsWith('content://') || filePath.startsWith('file://')) {
-      // 移动端 URI：使用 tauri-plugin-fs 的 JavaScript API
-      const { readTextFile } = await import('@tauri-apps/plugin-fs');
-      const fileContent = await readTextFile(filePath);
-      const parsedTree = JSON.parse(fileContent) as TreeNodeType;
-      tree.value = parsedTree;
-    } else {
-      // 桌面端：使用 Rust 后端
-      const fileContent = await invoke<string>("open_file", { path: filePath });
-      const parsedTree = JSON.parse(fileContent) as TreeNodeType;
-      tree.value = parsedTree;
-    }
-
+    const parsedTree = JSON.parse(content) as TreeNodeType;
+    tree.value = parsedTree;
     showSuccess("Document opened successfully!");
 
     // 文件加载后渲染数学公式
@@ -230,23 +193,11 @@ const handleFileUpload = async (): Promise<void> => {
 let autoSaveTimer: number | null = null;
 
 const setupAutoSave = (): void => {
-  if (!fileName.value) return;
-
-  // 移动端禁用自动保存，因为需要用户交互来获取文件写入权限
-  if (fileName.value.startsWith('content://') || fileName.value.startsWith('file://')) {
-    console.log("Auto-save is disabled on mobile due to permission requirements");
-    return;
-  }
-
+  if (!shortPath.value) return;
   autoSaveTimer = window.setInterval(
     async () => {
-      const dataStr = JSON.stringify(tree.value, null, 2);
       try {
-        // 桌面端：使用 Rust 后端
-        await invoke("save_file", {
-          path: fileName.value!,
-          content: dataStr,
-        });
+        saveToFile();
         console.log("Auto-saved successfully");
         showSuccess("Document auto-saved successfully!");
       } catch (err) {
@@ -265,7 +216,7 @@ const clearAutoSave = (): void => {
   }
 };
 
-watch([fileName, tree], () => {
+watch([shortPath, tree], () => {
   clearAutoSave();
   setupAutoSave();
 });
@@ -356,38 +307,10 @@ const generateHTML = async (): Promise<void> => {
 </body>
 </html>`;
 
-    let htmlPath: string;
-    if (fileName.value && !(fileName.value.startsWith('content://') || fileName.value.startsWith('file://'))) {
-      htmlPath = fileName.value.replace(/\.json$/, ".html");
-    } else {
-      const newName = await save({
-        defaultPath: "document.html",
-        filters: [{ name: "HTML Files", extensions: ["html"] }],
-      });
-
-      if (!newName) {
-        showInfo("HTML export cancelled.");
-        return;
-      }
-      htmlPath = newName;
+    if (!htmlOutputShortPath.value) {
+      htmlOutputShortPath.value = getShortPath();
     }
-
-    // 检查是否为移动端 URI
-    if (htmlPath.startsWith('content://') || htmlPath.startsWith('file://')) {
-      // 移动端 URI：使用 tauri-plugin-fs 的 open 方法获取可写文件句柄
-      const { open } = await import('@tauri-apps/plugin-fs');
-      const file = await open(htmlPath, { write: true, truncate: true, create: true });
-      await file.write(new TextEncoder().encode(htmlContent));
-      await file.close();
-    } else {
-      // 桌面端：使用 Rust 后端
-      await invoke("save_file", {
-        path: htmlPath,
-        content: htmlContent,
-      });
-    }
-
-    showSuccess("HTML exported successfully!");
+    outputFile(htmlOutputShortPath.value, htmlContent);
   } catch (error) {
     console.error("Error during HTML generation:", error);
     showError("Error during HTML generation: " + error);
@@ -398,29 +321,14 @@ onMounted(async () => {
   setupAutoSave();
 
   // 初始化 AI 建议服务 - 从配置文件加载
-  try {
-    const configStr = await invoke<string>("load_ai_config");
-    if (configStr) {
-      const aiConfig = JSON.parse(configStr);
-      console.log('[App] Initializing AI suggestion service from config file');
-      initAISuggestionService(aiConfig);
+  loadAIConfig().then(async (config) => {
+    if (config) {
+      console.log('[App] Initializing AI suggestion service from config');
+      initAISuggestionService(config);
     } else {
       console.warn('[App] No AI config found. AI suggestions will not be available.');
     }
-  } catch (error) {
-    try {
-      const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-      const configPath = `ai_api.json`;
-      const configStr = await readTextFile(configPath, { baseDir: BaseDirectory.AppConfig });
-      if (configStr) {
-        const aiConfig = JSON.parse(configStr);
-        initAISuggestionService(aiConfig);
-      }
-    } catch (error) {
-      console.log('[App] No existing AI config found:', error);
-    }
-    console.log('[App] No existing AI config found:', error);
-  }
+  });
 
   // 初始渲染数学公式
   nextTick(() => {
@@ -476,13 +384,13 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div class="bg-white rounded-xl shadow-md p-4 flex-1">
-        <div class="flex items-center">
+      <div class="bg-white rounded-xl shadow-md p-4 flex-1 max-w-md">
+        <div class="flex items-center max-w-md">
           <span class="text-slate-500 mr-2">File:</span>
           <span
-            class="font-mono font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded"
+            class="font-mono font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded max-w-md"
           >
-            {{ fileName || "Untitled" }}
+            {{ shortPath || "Untitled" }}
           </span>
         </div>
       </div>

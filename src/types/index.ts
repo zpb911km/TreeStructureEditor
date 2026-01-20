@@ -14,3 +14,9 @@ export interface Notification {
   type: "success" | "error" | "warning" | "info";
   fadeOut?: boolean;
 }
+
+export interface AIConfig {
+  apiKey: string;
+  baseURL: string;
+  model: string;
+}
