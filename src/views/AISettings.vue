@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { showSuccess, showError } from "../utils/notifications";
 import { AIConfig } from "../types";
 import { loadAIConfig, saveAIConfig } from "../apis";
 
-
+const router = useRouter();
 const config = ref<AIConfig>({
   apiKey: "",
   baseURL: "https://api.openai.com/v1",
@@ -117,10 +118,18 @@ onMounted(() => {
 <template>
   <div class="ai-settings-container">
     <div class="bg-white rounded-xl shadow-lg p-6 max-w-4xl mx-auto">
-      <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-        <span class="text-3xl mr-3">🤖</span>
-        AI 设置
-      </h2>
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+          <span class="text-3xl mr-3">🤖</span>
+          AI 设置
+        </h2>
+        <button
+          @click="router.push('/')"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+        >
+          返回
+        </button>
+      </div>
 
       <!-- API配置表单 -->
       <div class="space-y-4 mb-8">

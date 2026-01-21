@@ -1,6 +1,6 @@
 import * as fs from "@tauri-apps/plugin-fs";
 import * as path from "@tauri-apps/api/path";
-import { AIConfig } from "../types";
+import { AIConfig, FileNode } from "../types";
 import { showError, showInfo, showSuccess } from "../utils/notifications";
 
 
@@ -79,7 +79,7 @@ async function recursiveMakeDir(dir: string): Promise<void> {
     const exist = await fs.exists(currentDir, { baseDir: filesBaseDir });
     if (!exist) {
       await fs.mkdir(currentDir, { baseDir: filesBaseDir });
-      showInfo(`创建文件夹 ${currentDir} 成功`);
+      showInfo(`mkdir: ${currentDir}`);
     }
   }
 }
@@ -93,19 +93,19 @@ export async function saveFile(shortPath: string, content: string): Promise<void
     try {
       await recursiveMakeDir(fullDir);
     } catch (error) {
-      showError("创建文件夹失败: " + error);
+      showError("fail in mkdir:" + error);
     }
   } else {
-    showInfo(`文件夹${fullDir}已存在`);
+    showInfo(`${fullDir} is ready`);
   }
   console.log(`trying to write ${fullPath}`)
   fs.writeTextFile(fullPath, content, {
     baseDir: filesBaseDir,
     create: true,
   }).then(() => {
-    showSuccess("保存成功");
+    showSuccess("save success");
   }).catch((error) => {
-    showError("保存失败: " + error);
+    showError("save error: " + error);
   });
 }
 
@@ -117,7 +117,7 @@ export async function loadFile(filePath: string): Promise<string | null> {
     });
     return content;
   } catch (error) {
-    showError("读取文件失败: " + error);
+    showError("loadFile error: " + error);
     return null;
   }
 }
@@ -133,41 +133,93 @@ export async function outputFile(shortPath: string, content: string) {
     try {
       await recursiveMakeDir(fullDir);
     } catch (error) {
-      showError("创建文件夹失败: " + error);
+      showError("fail in mkdir: " + error);
     }
   } else {
-    showInfo(`文件夹${fullDir}已存在`);
+    showInfo(`${fullDir} is ready`);
   }
   console.log(`trying to write ${fullPath}`)
   fs.writeTextFile(fullPath, content, {
     baseDir: filesBaseDir,
     create: true,
   }).then(() => {
-    showSuccess("导出成功");
+    showSuccess("success export");
   }).catch((error) => {
-    showError("导出失败: " + error);
+    showError("export error:" + error);
   });
 }
 
 export async function deleteFile(filePath: string): Promise<void> {
-  const fullPath = await path.join(filesBaseDir.toString(), treePath, filePath);
+  const fullPath = await path.join(treePath, filePath);
   fs.remove(fullPath, {
     baseDir: filesBaseDir,
   }).then(() => {
-    showSuccess("删除成功");
+    showSuccess("success delete");
   }).catch((error) => {
-    showError("删除失败: " + error);
+    showError("delete failed: " + error);
   });
 }
 
-export async function getFilePaths(): Promise<string[]> {
-  const filePaths = await fs.readDir(treePath, {
+export async function createFile(parentDir: string | null, fileName: string): Promise<void> {
+  let fullPath = treePath;
+  if (parentDir) {
+    fullPath = await path.join(treePath, parentDir) + path.sep();
+  }
+  fullPath = await path.join(fullPath, fileName);
+  
+  fs.writeTextFile(fullPath, "", {
     baseDir: filesBaseDir,
-  }).then((files) => {
-    return files.map((file) => {
-      return file.name;
-    });
-  })
-  showInfo("获取文件列表成功" + filePaths);
-  return filePaths;
+    create: true,
+  }).then(() => {
+    showSuccess("success create");
+  }).catch((error) => {
+    showError("create error: " + error);
+  });
+}
+
+export async function createDirectory(parentDir: string | null, dirName: string): Promise<void> {
+  let fullPath = treePath;
+  if (parentDir) {
+    fullPath = await path.join(treePath, parentDir) + path.sep();
+  }
+  fullPath = await path.join(fullPath, dirName);
+  
+  fs.mkdir(fullPath, {
+    baseDir: filesBaseDir,
+    recursive: true,
+  }).then(() => {
+    showSuccess("success mkdir");
+  }).catch((error) => {
+    showError("mkdir error: " + error);
+  });
+}
+
+export async function renameFile(oldPath: string, newName: string): Promise<void> {
+  const fullPath = await path.join(treePath, oldPath);
+  const dirPath = await path.dirname(fullPath);
+  const newFullPath = await path.join(dirPath, newName);
+  
+  fs.rename(fullPath, newFullPath, {
+    oldPathBaseDir: filesBaseDir,
+    newPathBaseDir: filesBaseDir,
+  }).then(() => {
+    showSuccess("success rename");
+  }).catch((error) => {
+    showError("rename error: " + error);
+  });
+}
+
+export async function getFilePaths(node: FileNode | null | undefined, dirPath?: string): Promise<FileNode[]> {
+  let baseDir = filesBaseDir;
+  let queryPath = treePath;
+  if (dirPath) {
+    // 如果传入了 dirPath，说明是子目录，直接使用 dirPath 作为查询路径
+    queryPath = await path.join(treePath, dirPath) + path.sep();
+  } else if (node && node.isDirectory) {
+    // 如果没有传入 dirPath 但传入了 node，使用 node.name
+    queryPath = await path.join(treePath, node.name) + path.sep();
+  }
+  return await fs.readDir(queryPath, {
+    baseDir,
+  }) as FileNode[];
 }

@@ -17,6 +17,7 @@
     "fs:allow-create",
     "fs:allow-remove",
     "fs:allow-exists",
+    "fs:allow-rename",
     {
       "identifier": "fs:scope",
       "allow": [

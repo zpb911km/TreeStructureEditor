@@ -20,3 +20,9 @@ export interface AIConfig {
   baseURL: string;
   model: string;
 }
+
+export interface FileNode {
+  name: string;
+  isDirectory: boolean;
+  isFile: boolean;
+}
