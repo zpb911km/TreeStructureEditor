@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import FileBrowser from "../components/FileBrowser.vue";
+import { onMounted } from "vue";
+import { mkTreePathDir } from "../apis";
 
 const router = useRouter();
 
@@ -11,6 +13,10 @@ const handleFileSelected = (filePath: string) => {
     query: { file: filePath }
   });
 };
+
+onMounted(async () => {
+  await mkTreePathDir();
+});
 </script>
 
 <template>

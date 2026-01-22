@@ -11,6 +11,16 @@ const filesBaseDir = fs.BaseDirectory.Document;
 const treePath = "tree_structure_files/";
 const outputPath = "output/";
 
+export async function mkTreePathDir(): Promise<void> {
+  const exist = await fs.exists(treePath.trim(), { baseDir: filesBaseDir });
+  if (!exist) {
+    await fs.mkdir(treePath.trim(), { baseDir: filesBaseDir });
+    showInfo("make root folder");
+  } else {
+    showSuccess("root folder exists");
+  }
+}
+
 export async function saveAIConfig(config: AIConfig): Promise<void> {
   const exist = await fs.exists(configPath, { baseDir: AIConfigBaseDir });
   if (!exist) {

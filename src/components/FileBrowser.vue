@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { getFilePaths, deleteFile, createFile, createDirectory, renameFile } from "../apis";
-import { showSuccess, showError } from "../utils/notifications";
+import { showError } from "../utils/notifications";
 import { FileNode } from "../types";
 import * as path from "@tauri-apps/api/path";
 

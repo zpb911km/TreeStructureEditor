@@ -3,7 +3,7 @@ import NotificationSystem from './components/NotificationSystem.vue';
 import { useRouter } from 'vue-router';
 import { onMounted } from 'vue';
 
-onMounted(() => {
+onMounted(async () => {
   const router = useRouter();
   router.push('/editor');
 });
