@@ -1,8 +1,14 @@
 <script setup lang="ts">
+import { watch } from "vue";
 import NotificationSystem from "./components/NotificationSystem.vue";
 import { initializeTheme } from "./utils/theme";
+import { tree } from "./utils/tree";
 
 initializeTheme();
+watch(
+  () => tree,
+  () => {},
+);
 </script>
 
 <template>
@@ -10,6 +16,11 @@ initializeTheme();
     <main class="flex-grow pt-4 pb-20">
       <router-view />
     </main>
+    <footer
+      class="mt-12 text-center text-slate-500 dark:text-slate-400 text-sm"
+    >
+      <p>TreeStructureEditor • Hierarchical Markdown Editor • by zpb911km</p>
+    </footer>
 
     <!-- 底部导航栏 -->
     <nav

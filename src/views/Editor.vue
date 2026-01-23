@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import TreeNode from "../components/TreeNode.vue";
-import { generateId, initialTree } from "../utils/tree";
+import { generateId } from "../utils/tree";
 import { exportMarkdownParser, renderMath } from "../utils/markdown";
 import {
   showSuccess,
@@ -13,11 +13,10 @@ import {
 import { initAISuggestionService } from "../services/aiSuggestion";
 import type { TreeNode as TreeNodeType } from "../types";
 import { loadAIConfig, loadFile, outputFile, saveFile } from "../apis";
+import { tree, shortPath } from "../utils/tree";
 
 const router = useRouter();
 const route = useRoute();
-const tree = ref<TreeNodeType>(JSON.parse(JSON.stringify(initialTree)));
-const shortPath = ref<string | null>(null);
 
 const updateNode = (id: string, updates: Partial<TreeNodeType>): void => {
   const updateNodeRecursively = (node: TreeNodeType): TreeNodeType => {

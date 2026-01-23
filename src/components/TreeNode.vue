@@ -120,7 +120,7 @@ const canMoveDown = computed(
           </button>
           <div
             v-if="showDropdown"
-            class="dropdown-content absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20"
+            class="dropdown-content absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg dark:text-white z-20"
           >
             <div class="py-1">
               <button

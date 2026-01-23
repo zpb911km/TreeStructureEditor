@@ -1,5 +1,4 @@
 import { loadConfig, saveConfig } from "../apis";
-import { showInfo } from "./notifications";
 
 export interface ThemeConfig {
   darkMode: boolean;

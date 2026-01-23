@@ -116,7 +116,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+  <div>
     <h2
       class="text-2xl font-bold text-gray-800 dark:text-white flex items-center mb-6"
     >

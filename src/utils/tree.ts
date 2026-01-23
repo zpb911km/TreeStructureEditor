@@ -1,3 +1,4 @@
+import { ref } from "vue";
 import type { TreeNode } from "../types";
 
 export const generateId = (): string =>
@@ -38,3 +39,6 @@ export const initialTree: TreeNode = {
     },
   ],
 };
+
+export const tree = ref<TreeNode>(JSON.parse(JSON.stringify(initialTree)));
+export const shortPath = ref<string | null>(null);

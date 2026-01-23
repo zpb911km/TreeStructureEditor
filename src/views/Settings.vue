@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
 import AISettingsPanel from "../components/AISettingsPanel.vue";
-import { initializeTheme, toggleDarkMode, loadDarkMode } from "../utils/theme";
-import { showInfo } from "../utils/notifications";
+import { toggleDarkMode, loadDarkMode } from "../utils/theme";
 
-const router = useRouter();
 const activeTab = ref("ai");
 const darkMode = ref(false);
 
@@ -24,7 +21,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="settings-container bg-gray-100 dark:bg-gray-900 min-h-screen">
+  <div class="settings-container dark:bg-gray-900 min-h-screen">
     <div class="max-w-4xl mx-auto">
       <!-- 顶部导航 -->
       <div class="flex items-center justify-between mb-6">
