@@ -52,6 +52,42 @@
   margin: 0.2rem 0;
 }
 
+/* 深色模式 markdown 预览样式 */
+.dark .markdown-preview h1 {
+  color: #60a5fa;
+}
+.dark .markdown-preview h2 {
+  color: #3b82f6;
+}
+.dark .markdown-preview h3 {
+  color: #60a5fa;
+}
+.dark .markdown-preview p {
+  color: #cbd5e1;
+}
+.dark .markdown-preview strong {
+  color: #93c5fd;
+}
+.dark .markdown-preview em {
+  color: #e2e8f0;
+}
+.dark .markdown-preview li {
+  color: #94a3b8;
+}
+.dark .markdown-preview blockquote {
+  border-left-color: #60a5fa;
+  color: #93c5fd;
+}
+
+/* LaTeX 公式深色模式样式 - 使用反色滤镜 */
+.dark .markdown-preview .katex {
+  color: #e5e7eb;
+}
+
+.dark .markdown-preview .katex-display {
+  color: #e5e7eb;
+}
+
 /* 响应式下拉菜单样式 */
 .dropdown-content {
   min-width: 120px;
@@ -130,6 +166,31 @@
   background-color: #d1ecf1;
   border: 1px solid #bee5eb;
   color: #0c5460;
+}
+
+/* 深色模式通知栏样式 */
+.dark .notification.success {
+  background-color: #064e3b;
+  border: 1px solid #065f46;
+  color: #6ee7b7;
+}
+
+.dark .notification.error {
+  background-color: #7f1d1d;
+  border: 1px solid #991b1b;
+  color: #fca5a5;
+}
+
+.dark .notification.warning {
+  background-color: #78350f;
+  border: 1px solid #92400e;
+  color: #fcd34d;
+}
+
+.dark .notification.info {
+  background-color: #164e63;
+  border: 1px solid #155e75;
+  color: #67e8f9;
 }
 
 .notification-content {

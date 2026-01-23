@@ -21,26 +21,15 @@ onMounted(async () => {
 
 <template>
   <div class="file-browser-view">
-    <div class="max-w-4xl mx-auto p-6">
+    <div class="max-w-4xl mx-auto">
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-3xl font-bold text-gray-800">文件浏览器</h2>
-        <button
-          @click="router.push('/editor')"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-        >
-          返回编辑器
-        </button>
+        <h2 class="text-3xl font-bold text-gray-800 dark:text-white">文件浏览器</h2>
       </div>
 
-      <div class="bg-white rounded-xl shadow-lg p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
         <FileBrowser @file-selected="handleFileSelected" />
       </div>
     </div>
   </div>
 </template>
 
-<style scoped>
-.file-browser-view {
-  padding: 2rem;
-}
-</style>

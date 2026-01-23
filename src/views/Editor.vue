@@ -376,30 +376,30 @@ onUnmounted(() => {
     >
       <div class="flex flex-wrap gap-3">
         <button
-          class="px-5 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-xl shadow-md hover:from-blue-600 hover:to-indigo-700 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+          class="px-5 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-xl shadow-md hover:from-blue-600 hover:to-indigo-700 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
           @click="saveToFile"
         >
           Save Document
         </button>
         <button
-          class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium rounded-xl shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all transform hover:-translate-y-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2"
+          class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium rounded-xl shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all transform hover:-translate-y-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
           @click="handleFileUpload"
         >
           Open Document
         </button>
         <button
-          class="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-medium rounded-xl shadow-md hover:from-amber-600 hover:to-orange-700 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
+          class="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-medium rounded-xl shadow-md hover:from-amber-600 hover:to-orange-700 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
           @click="generateHTML"
         >
           Export to HTML
         </button>
       </div>
 
-      <div class="bg-white rounded-xl shadow-md p-4 flex-1 max-w-md">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 flex-1 max-w-md">
         <div class="flex items-center max-w-md">
-          <span class="text-slate-500 mr-2">File:</span>
+          <span class="text-slate-500 dark:text-slate-400 mr-2">File:</span>
           <span
-            class="font-mono font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded max-w-md"
+            class="font-mono font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded max-w-md"
           >
             {{ shortPath || "Untitled" }}
           </span>

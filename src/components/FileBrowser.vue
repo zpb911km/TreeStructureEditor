@@ -171,13 +171,13 @@ onMounted(() => {
     <div class="create-buttons mb-4 flex gap-2">
       <button
         @click="handleCreateFile"
-        class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
+        class="px-3 py-1.5 bg-blue-500 dark:bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
       >
         新建文件
       </button>
       <button
         @click="handleCreateDirectory"
-        class="px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
+        class="px-3 py-1.5 bg-green-500 dark:bg-green-600 text-white text-sm rounded-lg hover:bg-green-600 dark:hover:bg-green-700 transition-colors"
       >
         新建文件夹
       </button>
@@ -185,14 +185,14 @@ onMounted(() => {
     
     <div v-for="fileNode in files" :key="fileNode.name" class="file-item">
       <div 
-        class="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
+        class="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
         @click="onNodeClicked(fileNode)"
       >
         <span class="text-lg">
           {{ getNodeIcon(fileNode) }}
         </span>
         
-        <span v-if="!isEditing(fileNode)" class="flex-1 text-gray-700">
+        <span v-if="!isEditing(fileNode)" class="flex-1 text-gray-700 dark:text-gray-300">
           {{ fileNode.name }}
         </span>
         
@@ -202,7 +202,7 @@ onMounted(() => {
           @click.stop
           @keyup.enter="confirmRename"
           @keyup.esc="cancelRename"
-          class="flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600"
           ref="renameInput"
           @blur="confirmRename"
         />
@@ -210,14 +210,14 @@ onMounted(() => {
         <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
           <button
             @click.stop="startRename(fileNode)"
-            class="p-1 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
+            class="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
             title="重命名"
           >
             ✏️
           </button>
           <button
             @click.stop="handleDelete(fileNode)"
-            class="p-1 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+            class="p-1 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
             title="删除"
           >
             🗑️
@@ -225,7 +225,7 @@ onMounted(() => {
         </div>
       </div>
       
-      <div v-if="fileNode.isDirectory && expandedDirs.has(getNodePath(fileNode))" class="ml-6 border-l-2 border-gray-200 pl-2">
+      <div v-if="fileNode.isDirectory && expandedDirs.has(getNodePath(fileNode))" class="ml-6 border-l-2 border-gray-200 dark:border-gray-700 pl-2">
         <FileBrowser
           :parent-dir="fileNode"
           :path="getNodePath(fileNode)"
@@ -235,7 +235,7 @@ onMounted(() => {
       </div>
     </div>
     
-    <div v-if="files.length === 0" class="text-center py-8 text-gray-400">
+    <div v-if="files.length === 0" class="text-center py-8 text-gray-400 dark:text-gray-500">
       此文件夹为空
     </div>
   </div>

@@ -8,6 +8,7 @@ import * as monaco from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import { getAISuggestionService } from "../services/aiSuggestion";
 import { showInfo } from "../utils/notifications";
+import { loadDarkMode } from "../utils/theme";
 
 const props = defineProps({
   modelValue: String,
@@ -23,6 +24,13 @@ let idleTrigger: IdleTrigger | null = null;
 let allowNextAICompletion = false; // 用于控制是否允许下一次 AI 补全
 let completeCache: Map<string, string> = new Map();
 let autoIdleTriggerLock = true;
+
+// 更新 Monaco Editor 主题
+const updateEditorTheme = async () => {
+  if (!editorInstance) return;
+  const isDark = await loadDarkMode();
+  monaco.editor.setTheme(isDark ? "vs-dark" : "vs");
+};
 
 // ✅ 闲时检测器类
 class IdleTrigger {
@@ -98,6 +106,18 @@ onMounted(() => {
   });
 
   editorInstance.focus();
+
+  // 初始化主题
+  updateEditorTheme();
+
+  // 监听主题变化
+  const themeObserver = new MutationObserver(() => {
+    updateEditorTheme();
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
 
   // ✅ 注册 AI 建议提供者（使用闲时检测）
   registerAISuggestionProvider();
@@ -321,5 +341,14 @@ onBeforeUnmount(() => {
 .monaco-editor-container:focus-within {
   box-shadow: 0 0 0 2px #34d399;
   border-color: #34d399;
+}
+
+.dark .monaco-editor-container {
+  border-color: #059669;
+}
+
+.dark .monaco-editor-container:focus-within {
+  box-shadow: 0 0 0 2px #10b981;
+  border-color: #10b981;
 }
 </style>

@@ -103,8 +103,8 @@ const canMoveDown = computed(
       class="p-2 rounded-lg relative"
       :class="[
         node.type === 'branch'
-          ? 'bg-blue-50 border-2 border-blue-200 hover:bg-blue-100'
-          : 'bg-emerald-50 border-2 border-emerald-200',
+          ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+          : 'bg-emerald-50 dark:bg-emerald-900/30 border-2 border-emerald-200 dark:border-emerald-700',
       ]"
       @click="handleNodeClick"
     >
@@ -113,41 +113,41 @@ const canMoveDown = computed(
         <!-- Mobile dropdown menu -->
         <div v-if="isMobile" class="relative">
           <button
-            class="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
+            class="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/70"
             @click.stop="showDropdown = !showDropdown"
           >
             ⋯
           </button>
           <div
             v-if="showDropdown"
-            class="dropdown-content absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20"
+            class="dropdown-content absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20"
           >
             <div class="py-1">
               <button
                 v-if="canMoveUp"
-                class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100"
+                class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
                 @click="handleMove('up')"
               >
                 ↑ 上移
               </button>
               <button
                 v-if="canMoveDown"
-                class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100"
+                class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
                 @click="handleMove('down')"
               >
                 ↓ 下移
               </button>
             </div>
-            <div class="border-t border-gray-200 my-1" />
+            <div class="border-t border-gray-200 dark:border-gray-700 my-1" />
             <div v-if="node.type === 'branch'" class="py-1">
               <button
-                class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100"
+                class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
                 @click="handleAddBranch"
               >
                 + Branch
               </button>
               <button
-                class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100"
+                class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
                 @click="handleAddLeaf"
               >
                 + Leaf
@@ -155,11 +155,11 @@ const canMoveDown = computed(
             </div>
             <div
               v-if="node.type === 'leaf'"
-              class="border-t border-gray-200 my-1"
+              class="border-t border-gray-200 dark:border-gray-700 my-1"
             >
               <div class="py-1">
                 <button
-                  class="w-full text-left px-3 py-1 text-xs text-red-600 hover:bg-red-50"
+                  class="w-full text-left px-3 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
                   @click="handleDelete"
                 >
                   Delete
@@ -174,7 +174,7 @@ const canMoveDown = computed(
             <button
               :disabled="!canMoveUp"
               :hidden="!canMoveUp"
-              class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50"
+              class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
               @click.stop="handleMove('up')"
             >
               ↑
@@ -182,7 +182,7 @@ const canMoveDown = computed(
             <button
               :disabled="!canMoveDown"
               :hidden="!canMoveDown"
-              class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50"
+              class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
               @click.stop="handleMove('down')"
             >
               ↓
@@ -190,20 +190,20 @@ const canMoveDown = computed(
           </div>
           <div v-if="node.type === 'branch'" class="flex space-x-1">
             <button
-              class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+              class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/70"
               @click.stop="handleAddBranch"
             >
               + Branch
             </button>
             <button
-              class="px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"
+              class="px-2 py-1 text-xs bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-200 dark:hover:bg-emerald-900/70"
               @click.stop="handleAddLeaf"
             >
               + Leaf
             </button>
           </div>
           <button
-            class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+            class="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-900/70"
             @click.stop="handleDelete"
           >
             Delete
@@ -214,7 +214,7 @@ const canMoveDown = computed(
       <div class="w-full">
         <div v-if="node.type === 'branch'" class="flex items-center">
           <button
-            class="mr-2 text-blue-600 hover:text-blue-800 focus:outline-none"
+            class="mr-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 focus:outline-none"
             @click.stop="expanded = !expanded"
           >
             {{ expanded ? "▼" : "▶" }}
@@ -222,7 +222,7 @@ const canMoveDown = computed(
           <input
             type="text"
             :value="node.title"
-            class="font-bold text-lg bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-300"
+            class="font-bold text-lg bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-600 text-gray-900 dark:text-white"
             placeholder="Branch title"
             @change="handleTitleChange"
           />
@@ -235,13 +235,13 @@ const canMoveDown = computed(
           />
           <div
             v-else
-            class="prose prose-blue markdown-preview"
+            class="prose prose-blue dark:prose-invert markdown-preview"
             v-html="fullMarkdownParser(localContent)"
           ></div>
         </div>
         <ul
           v-if="expanded && node.children && node.children.length > 0"
-          class="ml-2 pl-0 border-dashed border-blue-200"
+          class="ml-2 pl-0 border-dashed border-blue-200 dark:border-blue-700"
         >
           <TreeNode
             v-for="(child, index) in node.children"

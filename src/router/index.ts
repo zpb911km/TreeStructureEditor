@@ -1,20 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Editor from '../views/Editor.vue';
-import AISettings from '../views/AISettings.vue';
+import Settings from '../views/Settings.vue';
 import FileBrowserView from '../views/FileBrowserView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: '/editor',
+      path: '/',
       name: 'editor',
       component: Editor,
     },
     {
-      path: '/ai-settings',
-      name: 'ai-settings',
-      component: AISettings,
+      path: '/settings',
+      name: 'settings',
+      component: Settings,
     },
     {
       path: '/files',

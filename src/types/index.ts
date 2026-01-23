@@ -26,3 +26,7 @@ export interface FileNode {
   isDirectory: boolean;
   isFile: boolean;
 }
+
+export interface Config {
+  darkMode?: boolean;
+}

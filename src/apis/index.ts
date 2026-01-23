@@ -1,12 +1,15 @@
 import * as fs from "@tauri-apps/plugin-fs";
 import * as path from "@tauri-apps/api/path";
-import { AIConfig, FileNode } from "../types";
+import { AIConfig, Config, FileNode } from "../types";
 import { showError, showInfo, showSuccess } from "../utils/notifications";
 
 
 const AIConfigBaseDir = fs.BaseDirectory.AppLocalData;
-const configPath = "AIConfig/";
-const configFile = "ai_api.json";
+const AIConfigPath = "AIConfig/";
+const AIConfigFile = "ai_api.json";
+const configBaseDir = fs.BaseDirectory.AppLocalData;
+const configPath = "config/";
+const configFile = "config.json";
 const filesBaseDir = fs.BaseDirectory.Document;
 const treePath = "tree_structure_files/";
 const outputPath = "output/";
@@ -22,62 +25,121 @@ export async function mkTreePathDir(): Promise<void> {
 }
 
 export async function saveAIConfig(config: AIConfig): Promise<void> {
-  const exist = await fs.exists(configPath, { baseDir: AIConfigBaseDir });
+  const exist = await fs.exists(AIConfigPath, { baseDir: AIConfigBaseDir });
   if (!exist) {
-    await fs.mkdir(configPath, { baseDir: AIConfigBaseDir });
-    showInfo("创建文件夹");
+    await fs.mkdir(AIConfigPath, { baseDir: AIConfigBaseDir });
+    showInfo("mkdir");
   }
   const configString = JSON.stringify(config);
-  const encodedConfig = new TextEncoder().encode(configString);
-  fs.open(await path.join(configPath, configFile), {
-    baseDir: AIConfigBaseDir,
-    create: true,
-    write: true,
-  }).then((file) => {
-    file.write(encodedConfig).then(() => {
-      file.close();
-      showInfo("保存成功");
-    });
+  fs.writeTextFile(
+    await path.join(AIConfigPath, AIConfigFile),
+    configString,
+    {
+      baseDir: AIConfigBaseDir,
+      create: true,
+    },
+  ).then(() => {
+    showSuccess("save success");
+  }).catch((error) => {
+    showError("save error: " + error);
   });
 }
 
 export async function loadAIConfig(): Promise<AIConfig | null> {
   try {
-    const exist = await fs.exists(configPath, { baseDir: AIConfigBaseDir });
+    const exist = await fs.exists(AIConfigPath, { baseDir: AIConfigBaseDir });
     if (!exist) {
-      await fs.mkdir(configPath, { baseDir: AIConfigBaseDir });
-      showInfo("创建文件夹");
+      await fs.mkdir(AIConfigPath, { baseDir: AIConfigBaseDir });
+      showInfo("mkdir");
     }
   } catch (error) {
-    showError("创建文件夹失败: " + error);
+    showError("mkdir error: " + error);
     return null;
   }
   try {
     const configString = await fs.readTextFile(
-      await path.join(configPath, configFile),
+      await path.join(AIConfigPath, AIConfigFile),
       {
         baseDir: AIConfigBaseDir,
       },
     );
     const config = JSON.parse(configString) as AIConfig;
     if (!(config.apiKey && config.baseURL && config.model)) {
-      showError("配置文件不完整");
+      showError("config file is invalid");
       return null;
     }
     return config;
   } catch (error) {
     const fileExist = await fs.exists(
-      await path.join(configPath, configFile),
+      await path.join(AIConfigPath, AIConfigFile),
       {
         baseDir: AIConfigBaseDir,
       },
     );
     if (!fileExist) {
-      showInfo("配置文件不存在,请填写并保存");
+      showInfo("No config file exists, please save config file first.");
       return null;
     }
-    showError("读取配置文件失败: " + error);
+    showError("load error: " + error);
     return null;
+  }
+}
+
+export async function saveConfig(config: Config): Promise<void> {
+  const exist = await fs.exists(configPath, { baseDir: configBaseDir });
+  if (!exist) {
+    await fs.mkdir(configPath, { baseDir: configBaseDir });
+    showInfo("mkdir");
+  }
+  const configString = JSON.stringify(config);
+  await fs.writeTextFile(
+    await path.join(configPath, configFile),
+    configString,
+    {
+      baseDir: configBaseDir,
+      create: true,
+    },
+  ).then(() => {
+    showSuccess("save success");
+  }).catch((error) => {
+    showError("save error: " + error);
+  });
+}
+
+export async function loadConfig(): Promise<Config> {
+  try {
+    const exist = await fs.exists(configPath, { baseDir: configBaseDir });
+    if (!exist) {
+      await fs.mkdir(configPath, { baseDir: configBaseDir });
+      showInfo("mkdir");
+    }
+  } catch (error) {
+    showError("mkdir error: " + error);
+    return {};
+  }
+  try {
+    const configbytes = await fs.readFile(
+      await path.join(configPath, configFile),
+      {
+        baseDir: configBaseDir,
+      },
+    );
+    const configString = new TextDecoder().decode(configbytes);
+    const config = JSON.parse(configString) as Config;
+    return config;
+  } catch (error) {
+    const fileExist = await fs.exists(
+      await path.join(configPath, configFile),
+      {
+        baseDir: configBaseDir,
+      },
+    );
+    if (!fileExist) {
+      showInfo("Config file not exists, please save config file first.");
+      return {};
+    }
+    showError("load config error: " + error);
+    return {};
   }
 }
 
