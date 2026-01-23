@@ -1,22 +1,23 @@
-import { loadConfig, saveConfig } from '../apis';
-import { showInfo } from './notifications';
-
+import { loadConfig, saveConfig } from "../apis";
+import { showInfo } from "./notifications";
 
 export interface ThemeConfig {
   darkMode: boolean;
 }
 
 const loadThemeConfig = async (): Promise<ThemeConfig | null> => {
-  return await loadConfig() as ThemeConfig | null;
+  return (await loadConfig()) as ThemeConfig | null;
 };
 
 const saveThemeConfig = async (config: ThemeConfig): Promise<void> => {
-  loadConfig().then((existingConfig) => {
-    saveConfig({ ...existingConfig, darkMode: config.darkMode })
-  }).catch(() => {
-    console.log("no config found");
-    saveConfig(config)
-  });
+  loadConfig()
+    .then((existingConfig) => {
+      saveConfig({ ...existingConfig, darkMode: config.darkMode });
+    })
+    .catch(() => {
+      console.log("no config found");
+      saveConfig(config);
+    });
 };
 
 export const loadDarkMode = async (): Promise<boolean> => {
@@ -30,9 +31,9 @@ export const saveDarkMode = async (sign: boolean): Promise<void> => {
 
 export const applyTheme = (darkMode: boolean): void => {
   if (darkMode) {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.add("dark");
   } else {
-    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.remove("dark");
   }
 };
 

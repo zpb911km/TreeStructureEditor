@@ -4,7 +4,12 @@ import { useRouter, useRoute } from "vue-router";
 import TreeNode from "../components/TreeNode.vue";
 import { generateId, initialTree } from "../utils/tree";
 import { exportMarkdownParser, renderMath } from "../utils/markdown";
-import { showSuccess, showError, showInfo, showWarning } from "../utils/notifications";
+import {
+  showSuccess,
+  showError,
+  showInfo,
+  showWarning,
+} from "../utils/notifications";
 import { initAISuggestionService } from "../services/aiSuggestion";
 import type { TreeNode as TreeNodeType } from "../types";
 import { loadAIConfig, loadFile, outputFile, saveFile } from "../apis";
@@ -153,7 +158,7 @@ const saveToFile = async (): Promise<void> => {
   try {
     if (!shortPath.value) {
       showError("Please select a file");
-      router.push('/files');
+      router.push("/files");
       return;
     }
     saveFile(shortPath.value, dataStr);
@@ -165,13 +170,13 @@ const saveToFile = async (): Promise<void> => {
 
 const handleFileUpload = async (): Promise<void> => {
   // 导航到文件浏览器
-  router.push('/files');
+  router.push("/files");
 };
 
 const loadFileByPath = async (filePath: string): Promise<void> => {
-  if (!filePath || !filePath.endsWith('json')) {
+  if (!filePath || !filePath.endsWith("json")) {
     showError("Please select a json file");
-    router.push('/files');
+    router.push("/files");
     return;
   }
   let content = await loadFile(filePath);
@@ -180,8 +185,8 @@ const loadFileByPath = async (filePath: string): Promise<void> => {
       id: generateId(),
       title: "Root",
       type: "branch",
-      children: []
-    }
+      children: [],
+    };
     content = JSON.stringify(root);
     showWarning("This file is empty. Initializing with a new tree structure.");
   }
@@ -233,12 +238,15 @@ watch([shortPath], () => {
   setupAutoSave();
 });
 
-watch(() => route.query.file, (newFile) => {
-  if (newFile && newFile !== shortPath.value) {
-    showInfo(`selected file: ${newFile}`);
-    loadFileByPath(newFile as string);
-  }
-});
+watch(
+  () => route.query.file,
+  (newFile) => {
+    if (newFile && newFile !== shortPath.value) {
+      showInfo(`selected file: ${newFile}`);
+      loadFileByPath(newFile as string);
+    }
+  },
+);
 
 watch([tree], () => {
   if (shortPath.value === null) {
@@ -332,7 +340,10 @@ const generateHTML = async (): Promise<void> => {
     </div>
 </body>
 </html>`;
-    outputFile(shortPath.value? shortPath.value : "document.json", htmlContent);
+    outputFile(
+      shortPath.value ? shortPath.value : "document.json",
+      htmlContent,
+    );
   } catch (error) {
     console.error("Error during HTML generation:", error);
     showError("Error during HTML generation: " + error);
@@ -345,10 +356,12 @@ onMounted(async () => {
   // 初始化 AI 建议服务 - 从配置文件加载
   loadAIConfig().then(async (config) => {
     if (config) {
-      console.log('[Editor] Initializing AI suggestion service from config');
+      console.log("[Editor] Initializing AI suggestion service from config");
       initAISuggestionService(config);
     } else {
-      console.warn('[Editor] No AI config found. AI suggestions will not be available.');
+      console.warn(
+        "[Editor] No AI config found. AI suggestions will not be available.",
+      );
     }
   });
 
@@ -395,7 +408,9 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 flex-1 max-w-md">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 flex-1 max-w-md"
+      >
         <div class="flex items-center max-w-md">
           <span class="text-slate-500 dark:text-slate-400 mr-2">File:</span>
           <span

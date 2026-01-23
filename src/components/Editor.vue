@@ -90,10 +90,10 @@ onMounted(() => {
       showSnippets: true,
       showStatusBar: true,
       preview: true,
-      previewMode: 'subwordSmart'
+      previewMode: "subwordSmart",
     },
     inlineSuggest: {
-      enabled: true
+      enabled: true,
     },
     bracketPairColorization: { enabled: true },
     autoClosingBrackets: "always",
@@ -102,7 +102,7 @@ onMounted(() => {
     quickSuggestions: true,
     acceptSuggestionOnEnter: "on",
     tabCompletion: "on",
-    suggestOnTriggerCharacters: true
+    suggestOnTriggerCharacters: true,
   });
 
   editorInstance.focus();
@@ -116,7 +116,7 @@ onMounted(() => {
   });
   themeObserver.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ['class']
+    attributeFilter: ["class"],
   });
 
   // ✅ 注册 AI 建议提供者（使用闲时检测）
@@ -150,7 +150,10 @@ const IDLE_DELAY = 3_000; // 3 秒无输入后触发 AI
 /**
  * 判断是否应在当前位置触发 AI 行内补全（移除节流逻辑）
  */
-function shouldTriggerAIWithoutThrottle(model: monaco.editor.ITextModel, position: monaco.Position): boolean {
+function shouldTriggerAIWithoutThrottle(
+  model: monaco.editor.ITextModel,
+  position: monaco.Position,
+): boolean {
   const lineNumber = position.lineNumber;
   const column = position.column;
 
@@ -159,7 +162,7 @@ function shouldTriggerAIWithoutThrottle(model: monaco.editor.ITextModel, positio
 
   // 1. 确保光标在行尾或只有空白字符在后面
   const textAfterCursor = lineContent.slice(column - 1);
-  if (textAfterCursor.trim() !== '') {
+  if (textAfterCursor.trim() !== "") {
     // 光标后有非空白字符，说明不是行尾，不触发
     return false;
   }
@@ -174,7 +177,10 @@ function shouldTriggerAIWithoutThrottle(model: monaco.editor.ITextModel, positio
   return true;
 }
 
-const getCacheKey = (model: monaco.editor.ITextModel, position: monaco.Position) => {
+const getCacheKey = (
+  model: monaco.editor.ITextModel,
+  position: monaco.Position,
+) => {
   const key = `${model.uri.toString()}:${position.lineNumber}:${position.column}`;
   console.log(`[Editor] Cache key: ${key}`);
   return key;
@@ -184,107 +190,116 @@ const getCacheKey = (model: monaco.editor.ITextModel, position: monaco.Position)
  * 注册 AI 行内补全 Provider（Inline Completions）
  */
 const registerAISuggestionProvider = () => {
-  console.log('[Editor] Registering AI inline suggestion provider with idle detection');
+  console.log(
+    "[Editor] Registering AI inline suggestion provider with idle detection",
+  );
   const aiService = getAISuggestionService();
   if (!aiService) {
-    console.warn('[Editor] AI suggestion service not available');
+    console.warn("[Editor] AI suggestion service not available");
     return;
   }
 
   // ✅ 创建闲时检测器
   idleTrigger = new IdleTrigger(IDLE_DELAY, () => {
-    console.log('[Editor] User is idle, AI completion is now allowed');
+    console.log("[Editor] User is idle, AI completion is now allowed");
     allowNextAICompletion = true;
     // 可选：触发一次 inline suggest（Monaco 会自动调用 provideInlineCompletions）
     if (!autoIdleTriggerLock) {
-      editorInstance?.trigger('ai', 'editor.action.inlineSuggest.trigger', {});
+      editorInstance?.trigger("ai", "editor.action.inlineSuggest.trigger", {});
       autoIdleTriggerLock = true;
     } else {
-      console.log('[Editor] AI completion is locked by previous completion');
+      console.log("[Editor] AI completion is locked by previous completion");
     }
   });
 
-  completionProvider = monaco.languages.registerInlineCompletionsProvider('markdown', {
-    provideInlineCompletions: async (model, position, _, token) => {
-      try {
-        if (token.isCancellationRequested) {
-          return { items: [] };
-        }
-
-        // 解锁
-        autoIdleTriggerLock = false;
-
-        // ✅ 不再使用 shouldTriggerAI 做节流，而是依赖 idle 机制
-        // 但我们仍保留“行尾”和“非单词中”判断，避免干扰
-        const basicCheck = shouldTriggerAIWithoutThrottle(model, position);
-        if (!basicCheck) {
-          return { items: [] };
-        }
-
-        // ✅ 只有在 idle 后才允许触发
-        if (!allowNextAICompletion) {
-          console.log('[Editor] AI completion not allowed due to idle');
-          return { items: [] };
-        }
-
-        // 消费一次允许标志
-        allowNextAICompletion = false;
-        
-        let suggestion: string | null = null;
-
-        const cacheKey = getCacheKey(model, position);
-        if (completeCache.has(cacheKey)) {
-          console.log('[Editor] Using cached completion for', cacheKey);
-          suggestion = completeCache.get(cacheKey) || "";
-        } else {
-          console.log('[Editor] AI inline completion triggered at', position);
-          showInfo('Asking AI for completion...');
-          suggestion = await aiService.getSuggestion(
-            model.getValue(),
-            { lineNumber: position.lineNumber, column: position.column }
-          );
-          if (suggestion) {
-            completeCache.set(cacheKey, suggestion);
+  completionProvider = monaco.languages.registerInlineCompletionsProvider(
+    "markdown",
+    {
+      provideInlineCompletions: async (model, position, _, token) => {
+        try {
+          if (token.isCancellationRequested) {
+            return { items: [] };
           }
-        }
 
-        if (!suggestion || typeof suggestion !== 'string' || suggestion.trim() === '') {
+          // 解锁
+          autoIdleTriggerLock = false;
+
+          // ✅ 不再使用 shouldTriggerAI 做节流，而是依赖 idle 机制
+          // 但我们仍保留“行尾”和“非单词中”判断，避免干扰
+          const basicCheck = shouldTriggerAIWithoutThrottle(model, position);
+          if (!basicCheck) {
+            return { items: [] };
+          }
+
+          // ✅ 只有在 idle 后才允许触发
+          if (!allowNextAICompletion) {
+            console.log("[Editor] AI completion not allowed due to idle");
+            return { items: [] };
+          }
+
+          // 消费一次允许标志
+          allowNextAICompletion = false;
+
+          let suggestion: string | null = null;
+
+          const cacheKey = getCacheKey(model, position);
+          if (completeCache.has(cacheKey)) {
+            console.log("[Editor] Using cached completion for", cacheKey);
+            suggestion = completeCache.get(cacheKey) || "";
+          } else {
+            console.log("[Editor] AI inline completion triggered at", position);
+            showInfo("Asking AI for completion...");
+            suggestion = await aiService.getSuggestion(model.getValue(), {
+              lineNumber: position.lineNumber,
+              column: position.column,
+            });
+            if (suggestion) {
+              completeCache.set(cacheKey, suggestion);
+            }
+          }
+
+          if (
+            !suggestion ||
+            typeof suggestion !== "string" ||
+            suggestion.trim() === ""
+          ) {
+            return { items: [] };
+          }
+
+          // ✅ 处理多行缩进对齐
+          const currentLine = model.getLineContent(position.lineNumber);
+          const leadingWhitespace = currentLine.match(/^\s*/)?.[0] || "";
+          const alignedSuggestion = suggestion
+            .split("\n")
+            .map((line, i) => (i === 0 ? line : leadingWhitespace + line))
+            .join("\n");
+
+          // ✅ 返回行内补全项
+          return {
+            items: [
+              {
+                insertText: alignedSuggestion,
+                range: {
+                  startLineNumber: position.lineNumber,
+                  startColumn: position.column,
+                  endLineNumber: position.lineNumber,
+                  endColumn: position.column,
+                },
+              },
+            ],
+          };
+        } catch (error) {
+          console.error("[Editor] AI inline completion error:", error);
           return { items: [] };
         }
-
-        // ✅ 处理多行缩进对齐
-        const currentLine = model.getLineContent(position.lineNumber);
-        const leadingWhitespace = currentLine.match(/^\s*/)?.[0] || '';
-        const alignedSuggestion = suggestion
-          .split('\n')
-          .map((line, i) => (i === 0 ? line : leadingWhitespace + line))
-          .join('\n');
-
-        // ✅ 返回行内补全项
-        return {
-          items: [
-            {
-              insertText: alignedSuggestion,
-              range: {
-                startLineNumber: position.lineNumber,
-                startColumn: position.column,
-                endLineNumber: position.lineNumber,
-                endColumn: position.column
-              }
-            }
-          ]
-        };
-      } catch (error) {
-        console.error('[Editor] AI inline completion error:', error);
-        return { items: [] };
-      }
+      },
+      disposeInlineCompletions: () => {
+        console.log("[Editor] Disposing AI inline suggestion provider");
+      },
     },
-    disposeInlineCompletions: () => {
-      console.log('[Editor] Disposing AI inline suggestion provider');
-    }
-  });
+  );
 
-  console.log('[Editor] AI inline suggestion provider registered successfully');
+  console.log("[Editor] AI inline suggestion provider registered successfully");
 };
 
 const adjustEditorHeight = () => {
@@ -304,29 +319,33 @@ const adjustEditorHeight = () => {
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (editorInstance && newValue !== undefined && newValue !== editorInstance.getValue()) {
+    if (
+      editorInstance &&
+      newValue !== undefined &&
+      newValue !== editorInstance.getValue()
+    ) {
       editorInstance.setValue(newValue);
     }
   },
 );
 
 onBeforeUnmount(() => {
-  console.log('[Editor] onBeforeUnmount - Cleaning up resources');
+  console.log("[Editor] onBeforeUnmount - Cleaning up resources");
   // ✅ 清理闲时检测器
   idleTrigger?.dispose();
   idleTrigger = null;
   contentChangeListener?.dispose();
   if (completionProvider) {
-    console.log('[Editor] Disposing inlineCompletionProvider');
+    console.log("[Editor] Disposing inlineCompletionProvider");
     completionProvider.dispose();
     completionProvider = null;
   }
   if (editorInstance) {
-    console.log('[Editor] Disposing editorInstance');
+    console.log("[Editor] Disposing editorInstance");
     editorInstance.dispose();
     editorInstance = null;
   }
-  console.log('[Editor] Cleanup complete');
+  console.log("[Editor] Cleanup complete");
 });
 </script>
 

@@ -16,13 +16,15 @@ const isTesting = ref(false);
 const isSaving = ref(false);
 
 const loadTheAIConfig = async () => {
-  loadAIConfig().then((ai_config) => {
-    if (ai_config) {
-      config.value = ai_config;
-    }
-  }).catch((error) => {
-    showError("加载配置失败: " + error);
-  });
+  loadAIConfig()
+    .then((ai_config) => {
+      if (ai_config) {
+        config.value = ai_config;
+      }
+    })
+    .catch((error) => {
+      showError("加载配置失败: " + error);
+    });
 };
 
 const saveConfig = async () => {
@@ -42,13 +44,15 @@ const saveConfig = async () => {
   }
 
   isSaving.value = true;
-  saveAIConfig(config.value).then(() => {
-    isSaving.value = false;
-    showSuccess("配置保存成功");
-  }).catch((error) => {
-    isSaving.value = false;
-    showError("保存配置失败: " + error);
-  });
+  saveAIConfig(config.value)
+    .then(() => {
+      isSaving.value = false;
+      showSuccess("配置保存成功");
+    })
+    .catch((error) => {
+      isSaving.value = false;
+      showError("保存配置失败: " + error);
+    });
 };
 
 const testAPI = async () => {
@@ -113,7 +117,9 @@ onMounted(() => {
 
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-    <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center mb-6">
+    <h2
+      class="text-2xl font-bold text-gray-800 dark:text-white flex items-center mb-6"
+    >
       <span class="text-3xl mr-3">🤖</span>
       AI 设置
     </h2>
@@ -121,7 +127,9 @@ onMounted(() => {
     <!-- API配置表单 -->
     <div class="space-y-4 mb-8">
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        >
           API Key <span class="text-red-500">*</span>
         </label>
         <input
@@ -133,7 +141,9 @@ onMounted(() => {
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        >
           Base URL <span class="text-red-500">*</span>
         </label>
         <input
@@ -145,7 +155,9 @@ onMounted(() => {
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        >
           模型名称 <span class="text-red-500">*</span>
         </label>
         <input
@@ -172,10 +184,14 @@ onMounted(() => {
 
     <!-- API测试区域 -->
     <div class="space-y-4">
-      <h3 class="text-lg font-semibold text-gray-800 dark:text-white">API 测试</h3>
-      
+      <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+        API 测试
+      </h3>
+
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        >
           测试问题
         </label>
         <input
@@ -197,7 +213,9 @@ onMounted(() => {
       </div>
 
       <div v-if="testAnswer" class="mt-4">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        >
           AI 回答
         </label>
         <div
@@ -209,14 +227,25 @@ onMounted(() => {
     </div>
 
     <!-- 提示信息 -->
-    <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+    <div
+      class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg"
+    >
       <p class="text-sm text-blue-800 dark:text-blue-300">
-        <strong>提示:</strong> 配置将保存在 <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">$HOME/.TreeStructureEditor/ai_api.json</code>
+        <strong>提示:</strong> 配置将保存在
+        <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded"
+          >$HOME/.TreeStructureEditor/ai_api.json</code
+        >
       </p>
       <p class="text-sm text-blue-800 dark:text-blue-300">
-        <strong>提示:</strong> 你可以在叶子节点编写过程中使用 <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">Ctrl+Space</code> 触发自动补全，并生成AI提示。
+        <strong>提示:</strong> 你可以在叶子节点编写过程中使用
+        <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded"
+          >Ctrl+Space</code
+        >
+        触发自动补全，并生成AI提示。
         <br />
-        使用 <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">Tab</code> 键接受补全项。
+        使用
+        <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">Tab</code>
+        键接受补全项。
       </p>
     </div>
   </div>
@@ -224,6 +253,6 @@ onMounted(() => {
 
 <style scoped>
 code {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 </style>

@@ -9,8 +9,8 @@ const router = useRouter();
 const handleFileSelected = (filePath: string) => {
   // 导航到编辑器并传递文件路径
   router.push({
-    name: 'editor',
-    query: { file: filePath }
+    name: "editor",
+    query: { file: filePath },
   });
 };
 
@@ -23,7 +23,9 @@ onMounted(async () => {
   <div class="file-browser-view">
     <div class="max-w-4xl mx-auto">
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-3xl font-bold text-gray-800 dark:text-white">文件浏览器</h2>
+        <h2 class="text-3xl font-bold text-gray-800 dark:text-white">
+          文件浏览器
+        </h2>
       </div>
 
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
@@ -32,4 +34,3 @@ onMounted(async () => {
     </div>
   </div>
 </template>
-

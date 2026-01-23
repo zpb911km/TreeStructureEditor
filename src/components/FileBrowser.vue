@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { getFilePaths, deleteFile, createFile, createDirectory, renameFile } from "../apis";
+import {
+  getFilePaths,
+  deleteFile,
+  createFile,
+  createDirectory,
+  renameFile,
+} from "../apis";
 import { showError } from "../utils/notifications";
 import { FileNode } from "../types";
 import * as path from "@tauri-apps/api/path";
@@ -19,11 +25,13 @@ const editingPath = ref<string | null>(null);
 const newName = ref<string>("");
 
 const loadFiles = async () => {
-  getFilePaths(props.parentDir, props.path).then((filePaths) => {
-    files.value = filePaths;
-  }).catch((error) => {
-    showError("loadFiles error" + error);
-  });
+  getFilePaths(props.parentDir, props.path)
+    .then((filePaths) => {
+      files.value = filePaths;
+    })
+    .catch((error) => {
+      showError("loadFiles error" + error);
+    });
 };
 
 const getNodePath = (node: FileNode) => {
@@ -44,16 +52,16 @@ const toggleDirectory = (node: FileNode) => {
 
 const onFileSelected = async (node: FileNode) => {
   const nodePath = getNodePath(node);
-  emit('file-selected', nodePath);
+  emit("file-selected", nodePath);
   router.push({
-    name: 'editor',
-    query: { file: nodePath }
+    name: "editor",
+    query: { file: nodePath },
   });
 };
 
 const emit = defineEmits<{
-  (e: 'file-selected', filePath: string): void
-  (e: 'refresh'): void
+  (e: "file-selected", filePath: string): void;
+  (e: "refresh"): void;
 }>();
 
 const startRename = (node: FileNode) => {
@@ -68,14 +76,14 @@ const confirmRename = async () => {
     editingPath.value = null;
     return;
   }
-  
+
   try {
     await renameFile(editingPath.value, newName.value.trim());
     editingNode.value = null;
     editingPath.value = null;
     newName.value = "";
     await loadFiles();
-    emit('refresh');
+    emit("refresh");
   } catch (error) {
     showError("rename error: " + error);
   }
@@ -92,7 +100,7 @@ const handleDelete = async (node: FileNode) => {
     const nodePath = getNodePath(node);
     await deleteFile(nodePath);
     await loadFiles();
-    emit('refresh');
+    emit("refresh");
   } catch (error) {
     showError("delete error: " + error);
   }
@@ -103,11 +111,11 @@ const handleCreateFile = async () => {
   if (!fileName || !fileName.trim()) {
     return;
   }
-  
+
   try {
     await createFile(props.path || null, fileName.trim());
     await loadFiles();
-    emit('refresh');
+    emit("refresh");
   } catch (error) {
     showError("creat error: " + error);
   }
@@ -118,11 +126,11 @@ const handleCreateDirectory = async () => {
   if (!dirName || !dirName.trim()) {
     return;
   }
-  
+
   try {
     await createDirectory(props.path || null, dirName.trim());
     await loadFiles();
-    emit('refresh');
+    emit("refresh");
   } catch (error) {
     showError("mkdir error: " + error);
   }
@@ -137,29 +145,28 @@ const getNodeIcon = (node: FileNode) => {
     return expandedDirs.value.has(getNodePath(node)) ? "📂" : "📁";
   } else if (node.isFile) {
     if (node.name.endsWith(".json")) {
-      return "🌲"
+      return "🌲";
     } else if (node.name.endsWith(".html")) {
-      return "🌐"
+      return "🌐";
     } else {
-      return "📄"
+      return "📄";
     }
   }
 };
 
 const onNodeClicked = (node: FileNode) => {
   if (node.isDirectory) {
-    return toggleDirectory(node)
+    return toggleDirectory(node);
   } else if (node.isFile) {
     if (node.name.endsWith(".json")) {
-      return onFileSelected(node)
-    }  else {
+      return onFileSelected(node);
+    } else {
       return;
     }
   } else {
     return;
   }
-}
-  
+};
 
 onMounted(() => {
   loadFiles();
@@ -182,20 +189,23 @@ onMounted(() => {
         新建文件夹
       </button>
     </div>
-    
+
     <div v-for="fileNode in files" :key="fileNode.name" class="file-item">
-      <div 
+      <div
         class="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
         @click="onNodeClicked(fileNode)"
       >
         <span class="text-lg">
           {{ getNodeIcon(fileNode) }}
         </span>
-        
-        <span v-if="!isEditing(fileNode)" class="flex-1 text-gray-700 dark:text-gray-300">
+
+        <span
+          v-if="!isEditing(fileNode)"
+          class="flex-1 text-gray-700 dark:text-gray-300"
+        >
           {{ fileNode.name }}
         </span>
-        
+
         <input
           v-else
           v-model="newName"
@@ -206,8 +216,10 @@ onMounted(() => {
           ref="renameInput"
           @blur="confirmRename"
         />
-        
-        <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+
+        <div
+          class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1"
+        >
           <button
             @click.stop="startRename(fileNode)"
             class="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
@@ -224,8 +236,11 @@ onMounted(() => {
           </button>
         </div>
       </div>
-      
-      <div v-if="fileNode.isDirectory && expandedDirs.has(getNodePath(fileNode))" class="ml-6 border-l-2 border-gray-200 dark:border-gray-700 pl-2">
+
+      <div
+        v-if="fileNode.isDirectory && expandedDirs.has(getNodePath(fileNode))"
+        class="ml-6 border-l-2 border-gray-200 dark:border-gray-700 pl-2"
+      >
         <FileBrowser
           :parent-dir="fileNode"
           :path="getNodePath(fileNode)"
@@ -234,8 +249,11 @@ onMounted(() => {
         />
       </div>
     </div>
-    
-    <div v-if="files.length === 0" class="text-center py-8 text-gray-400 dark:text-gray-500">
+
+    <div
+      v-if="files.length === 0"
+      class="text-center py-8 text-gray-400 dark:text-gray-500"
+    >
       此文件夹为空
     </div>
   </div>

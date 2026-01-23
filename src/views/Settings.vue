@@ -28,7 +28,9 @@ onMounted(async () => {
     <div class="max-w-4xl mx-auto">
       <!-- 顶部导航 -->
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
+        <h2
+          class="text-2xl font-bold text-gray-800 dark:text-white flex items-center"
+        >
           <span class="text-3xl mr-3">⚙️</span>
           设置
         </h2>
@@ -43,7 +45,7 @@ onMounted(async () => {
               'flex-1 px-6 py-4 text-center font-medium transition-colors',
               activeTab === 'ai'
                 ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200',
             ]"
           >
             🤖 AI 设置
@@ -54,7 +56,7 @@ onMounted(async () => {
               'flex-1 px-6 py-4 text-center font-medium transition-colors',
               activeTab === 'appearance'
                 ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200',
             ]"
           >
             🎨 外观设置
@@ -65,22 +67,36 @@ onMounted(async () => {
       <!-- 标签页内容 -->
       <div class="tab-content">
         <!-- AI 设置 -->
-        <div v-if="activeTab === 'ai'" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div
+          v-if="activeTab === 'ai'"
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
+        >
           <AISettingsPanel />
         </div>
 
         <!-- 外观设置 -->
-        <div v-if="activeTab === 'appearance'" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center mb-6">
+        <div
+          v-if="activeTab === 'appearance'"
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
+        >
+          <h2
+            class="text-2xl font-bold text-gray-800 dark:text-white flex items-center mb-6"
+          >
             <span class="text-3xl mr-3">🎨</span>
             外观设置
           </h2>
 
           <!-- 深色模式开关 -->
-          <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div
+            class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+          >
             <div>
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">深色模式</h3>
-              <p class="text-sm text-gray-600 dark:text-gray-400">启用深色主题以减轻眼睛疲劳</p>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                深色模式
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                启用深色主题以减轻眼睛疲劳
+              </p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input

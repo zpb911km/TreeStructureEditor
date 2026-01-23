@@ -3,7 +3,6 @@ import * as path from "@tauri-apps/api/path";
 import { AIConfig, Config, FileNode } from "../types";
 import { showError, showInfo, showSuccess } from "../utils/notifications";
 
-
 const AIConfigBaseDir = fs.BaseDirectory.AppLocalData;
 const AIConfigPath = "AIConfig/";
 const AIConfigFile = "ai_api.json";
@@ -31,18 +30,16 @@ export async function saveAIConfig(config: AIConfig): Promise<void> {
     showInfo("mkdir");
   }
   const configString = JSON.stringify(config);
-  fs.writeTextFile(
-    await path.join(AIConfigPath, AIConfigFile),
-    configString,
-    {
-      baseDir: AIConfigBaseDir,
-      create: true,
-    },
-  ).then(() => {
-    showSuccess("save success");
-  }).catch((error) => {
-    showError("save error: " + error);
-  });
+  fs.writeTextFile(await path.join(AIConfigPath, AIConfigFile), configString, {
+    baseDir: AIConfigBaseDir,
+    create: true,
+  })
+    .then(() => {
+      showSuccess("save success");
+    })
+    .catch((error) => {
+      showError("save error: " + error);
+    });
 }
 
 export async function loadAIConfig(): Promise<AIConfig | null> {
@@ -92,18 +89,17 @@ export async function saveConfig(config: Config): Promise<void> {
     showInfo("mkdir");
   }
   const configString = JSON.stringify(config);
-  await fs.writeTextFile(
-    await path.join(configPath, configFile),
-    configString,
-    {
+  await fs
+    .writeTextFile(await path.join(configPath, configFile), configString, {
       baseDir: configBaseDir,
       create: true,
-    },
-  ).then(() => {
-    showSuccess("save success");
-  }).catch((error) => {
-    showError("save error: " + error);
-  });
+    })
+    .then(() => {
+      showSuccess("save success");
+    })
+    .catch((error) => {
+      showError("save error: " + error);
+    });
 }
 
 export async function loadConfig(): Promise<Config> {
@@ -128,12 +124,9 @@ export async function loadConfig(): Promise<Config> {
     const config = JSON.parse(configString) as Config;
     return config;
   } catch (error) {
-    const fileExist = await fs.exists(
-      await path.join(configPath, configFile),
-      {
-        baseDir: configBaseDir,
-      },
-    );
+    const fileExist = await fs.exists(await path.join(configPath, configFile), {
+      baseDir: configBaseDir,
+    });
     if (!fileExist) {
       showInfo("Config file not exists, please save config file first.");
       return {};
@@ -156,11 +149,14 @@ async function recursiveMakeDir(dir: string): Promise<void> {
   }
 }
 
-export async function saveFile(shortPath: string, content: string): Promise<void> {
+export async function saveFile(
+  shortPath: string,
+  content: string,
+): Promise<void> {
   const fullPath = await path.join(treePath, shortPath);
-  const fullDir = await path.dirname(fullPath) + path.sep();
+  const fullDir = (await path.dirname(fullPath)) + path.sep();
   const exist = await fs.exists(fullPath, { baseDir: filesBaseDir });
-  console.log(shortPath, treePath, fullPath, fullDir, exist)
+  console.log(shortPath, treePath, fullPath, fullDir, exist);
   if (!exist) {
     try {
       await recursiveMakeDir(fullDir);
@@ -170,15 +166,17 @@ export async function saveFile(shortPath: string, content: string): Promise<void
   } else {
     showInfo(`${fullDir} is ready`);
   }
-  console.log(`trying to write ${fullPath}`)
+  console.log(`trying to write ${fullPath}`);
   fs.writeTextFile(fullPath, content, {
     baseDir: filesBaseDir,
     create: true,
-  }).then(() => {
-    showSuccess("save success");
-  }).catch((error) => {
-    showError("save error: " + error);
-  });
+  })
+    .then(() => {
+      showSuccess("save success");
+    })
+    .catch((error) => {
+      showError("save error: " + error);
+    });
 }
 
 export async function loadFile(filePath: string): Promise<string | null> {
@@ -196,11 +194,12 @@ export async function loadFile(filePath: string): Promise<string | null> {
 
 export async function outputFile(shortPath: string, content: string) {
   let fullPath = await path.join(treePath, shortPath);
-  const fullDir = await path.dirname(fullPath) + path.sep() + outputPath + path.sep();
+  const fullDir =
+    (await path.dirname(fullPath)) + path.sep() + outputPath + path.sep();
   const name = (await path.basename(fullPath)).replace(".json", ".html");
   fullPath = await path.join(fullDir, name);
   const exist = await fs.exists(fullPath, { baseDir: filesBaseDir });
-  console.log(shortPath, treePath, fullPath, fullDir, exist)
+  console.log(shortPath, treePath, fullPath, fullDir, exist);
   if (!exist) {
     try {
       await recursiveMakeDir(fullDir);
@@ -210,88 +209,110 @@ export async function outputFile(shortPath: string, content: string) {
   } else {
     showInfo(`${fullDir} is ready`);
   }
-  console.log(`trying to write ${fullPath}`)
+  console.log(`trying to write ${fullPath}`);
   fs.writeTextFile(fullPath, content, {
     baseDir: filesBaseDir,
     create: true,
-  }).then(() => {
-    showSuccess("success export");
-  }).catch((error) => {
-    showError("export error:" + error);
-  });
+  })
+    .then(() => {
+      showSuccess("success export");
+    })
+    .catch((error) => {
+      showError("export error:" + error);
+    });
 }
 
 export async function deleteFile(filePath: string): Promise<void> {
   const fullPath = await path.join(treePath, filePath);
   fs.remove(fullPath, {
     baseDir: filesBaseDir,
-  }).then(() => {
-    showSuccess("success delete");
-  }).catch((error) => {
-    showError("delete failed: " + error);
-  });
+  })
+    .then(() => {
+      showSuccess("success delete");
+    })
+    .catch((error) => {
+      showError("delete failed: " + error);
+    });
 }
 
-export async function createFile(parentDir: string | null, fileName: string): Promise<void> {
+export async function createFile(
+  parentDir: string | null,
+  fileName: string,
+): Promise<void> {
   let fullPath = treePath;
   if (parentDir) {
-    fullPath = await path.join(treePath, parentDir) + path.sep();
+    fullPath = (await path.join(treePath, parentDir)) + path.sep();
   }
   fullPath = await path.join(fullPath, fileName);
-  
+
   fs.writeTextFile(fullPath, "", {
     baseDir: filesBaseDir,
     create: true,
-  }).then(() => {
-    showSuccess("success create");
-  }).catch((error) => {
-    showError("create error: " + error);
-  });
+  })
+    .then(() => {
+      showSuccess("success create");
+    })
+    .catch((error) => {
+      showError("create error: " + error);
+    });
 }
 
-export async function createDirectory(parentDir: string | null, dirName: string): Promise<void> {
+export async function createDirectory(
+  parentDir: string | null,
+  dirName: string,
+): Promise<void> {
   let fullPath = treePath;
   if (parentDir) {
-    fullPath = await path.join(treePath, parentDir) + path.sep();
+    fullPath = (await path.join(treePath, parentDir)) + path.sep();
   }
   fullPath = await path.join(fullPath, dirName);
-  
+
   fs.mkdir(fullPath, {
     baseDir: filesBaseDir,
     recursive: true,
-  }).then(() => {
-    showSuccess("success mkdir");
-  }).catch((error) => {
-    showError("mkdir error: " + error);
-  });
+  })
+    .then(() => {
+      showSuccess("success mkdir");
+    })
+    .catch((error) => {
+      showError("mkdir error: " + error);
+    });
 }
 
-export async function renameFile(oldPath: string, newName: string): Promise<void> {
+export async function renameFile(
+  oldPath: string,
+  newName: string,
+): Promise<void> {
   const fullPath = await path.join(treePath, oldPath);
   const dirPath = await path.dirname(fullPath);
   const newFullPath = await path.join(dirPath, newName);
-  
+
   fs.rename(fullPath, newFullPath, {
     oldPathBaseDir: filesBaseDir,
     newPathBaseDir: filesBaseDir,
-  }).then(() => {
-    showSuccess("success rename");
-  }).catch((error) => {
-    showError("rename error: " + error);
-  });
+  })
+    .then(() => {
+      showSuccess("success rename");
+    })
+    .catch((error) => {
+      showError("rename error: " + error);
+    });
 }
 
-export async function getFilePaths(node: FileNode | null | undefined, dirPath?: string): Promise<FileNode[]> {
+export async function getFilePaths(
+  node: FileNode | null | undefined,
+  dirPath?: string,
+): Promise<FileNode[]> {
   let baseDir = filesBaseDir;
   let queryPath = treePath;
   if (dirPath) {
     // 如果传入了 dirPath，说明是子目录，直接使用 dirPath 作为查询路径
-    queryPath = await path.join(treePath, dirPath) + path.sep();
+    queryPath = (await path.join(treePath, dirPath)) + path.sep();
   } else if (node && node.isDirectory) {
     // 如果没有传入 dirPath 但传入了 node，使用 node.name
-    queryPath = await path.join(treePath, node.name) + path.sep();
+    queryPath = (await path.join(treePath, node.name)) + path.sep();
   }
-  return await fs.readDir(queryPath, {
+  return (await fs.readDir(queryPath, {
     baseDir,
-  }) as FileNode[];
+  })) as FileNode[];
 }
