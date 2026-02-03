@@ -58,6 +58,17 @@ onMounted(async () => {
           >
             🎨 外观设置
           </button>
+          <button
+            @click="activeTab = 'input'"
+            :class="[
+              'flex-1 px-6 py-4 text-center font-medium transition-colors',
+              activeTab === 'input'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200',
+            ]"
+          >
+            ⌨️ 输入设置
+          </button>
         </div>
       </div>
 
@@ -107,12 +118,30 @@ onMounted(async () => {
               ></div>
             </label>
           </div>
+        </div>
 
-          <!-- 其他外观设置可以在这里添加 -->
-          <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              更多外观设置功能即将推出...
-            </p>
+        <!-- 输入设置 -->
+        <div
+          v-if="activeTab === 'input'"
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
+        >
+          <h2
+            class="text-2xl font-bold text-gray-800 dark:text-white flex items-center mb-6"
+          >
+            <span class="text-3xl mr-3">⌨️</span>
+            输入设置
+          </h2>
+          <div
+            class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+          >
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                自动换行
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                自动换行以保持代码的格式
+              </p>
+            </div>
           </div>
         </div>
       </div>

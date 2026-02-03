@@ -1,8 +1,45 @@
 <script setup lang="ts">
-import { watch } from "vue";
+import { watch, provide, ref } from "vue";
 import NotificationSystem from "./components/NotificationSystem.vue";
 import { initializeTheme } from "./utils/theme";
 import { tree } from "./utils/tree";
+
+// 内部剪贴板
+const clipboardText = ref("");
+const clipboardSelection = ref({ start: 0, end: 0 });
+
+// 剪贴板操作方法
+const setClipboardText = (text: string) => {
+  clipboardText.value = text;
+};
+
+const getClipboardText = () => {
+  return clipboardText.value;
+};
+
+const clearClipboard = () => {
+  clipboardText.value = "";
+  clipboardSelection.value = { start: 0, end: 0 };
+};
+
+const setClipboardSelection = (start: number, end: number) => {
+  clipboardSelection.value = { start, end };
+};
+
+const getClipboardSelection = () => {
+  return clipboardSelection.value;
+};
+
+// 提供剪贴板功能给子组件
+provide('internalClipboard', {
+  text: clipboardText,
+  selection: clipboardSelection,
+  setText: setClipboardText,
+  getText: getClipboardText,
+  clear: clearClipboard,
+  setSelection: setClipboardSelection,
+  getSelection: getClipboardSelection,
+});
 
 initializeTheme();
 watch(

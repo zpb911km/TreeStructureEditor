@@ -2,7 +2,7 @@
 import { ref, onMounted } from "vue";
 import { showSuccess, showError } from "../utils/notifications";
 import { AIConfig } from "../types";
-import { loadAIConfig, saveAIConfig } from "../apis";
+import { loadAIConfig, loadConfig, saveAIConfig, saveConfig } from "../apis";
 
 const config = ref<AIConfig>({
   apiKey: "",
@@ -14,6 +14,35 @@ const testQuestion = ref("你好,请简单介绍一下你自己");
 const testAnswer = ref("");
 const isTesting = ref(false);
 const isSaving = ref(false);
+const useAI = ref(true);
+
+
+const loadUseAI = async () => {
+  loadConfig()
+    .then((config) => {
+      if (config) {
+        useAI.value = config.useAI? config.useAI : false;
+      }
+    })
+    .catch((error) => {
+      showError("加载配置失败: " + error);
+    });
+};
+
+const saveUseAI = async () => {
+  loadConfig()
+    .then((config) => {
+      saveConfig({
+        useAI: useAI.value,
+        ...config,
+      }).then(() => {
+        showSuccess("保存配置成功");
+      });
+    })
+    .catch((error) => {
+      showError("保存配置失败: " + error);
+    });
+};
 
 const loadTheAIConfig = async () => {
   loadAIConfig()
@@ -27,7 +56,7 @@ const loadTheAIConfig = async () => {
     });
 };
 
-const saveConfig = async () => {
+const saveInputedConfig = async () => {
   if (!config.value.apiKey) {
     showError("请输入API Key");
     return;
@@ -112,6 +141,7 @@ const testAPI = async () => {
 
 onMounted(() => {
   loadTheAIConfig();
+  loadUseAI();
 });
 </script>
 
@@ -124,8 +154,32 @@ onMounted(() => {
       AI 设置
     </h2>
 
+    <div
+      class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+    >
+      <div>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+          AI 全局开关
+        </h3>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input
+          type="checkbox"
+          v-model="useAI"
+          @change="saveUseAI"
+          class="sr-only peer"
+        />
+        <div
+          class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
+        ></div>
+      </label>
+    </div>
+
+    <!-- 分隔线 -->
+    <hr class="my-6 border-gray-200 dark:border-gray-700" />
+
     <!-- API配置表单 -->
-    <div class="space-y-4 mb-8">
+    <div v-if="useAI" class="space-y-4 mb-8">
       <div>
         <label
           class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -170,7 +224,7 @@ onMounted(() => {
 
       <div class="flex justify-end">
         <button
-          @click="saveConfig"
+          @click="saveInputedConfig"
           :disabled="isSaving"
           class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
@@ -183,7 +237,7 @@ onMounted(() => {
     <hr class="my-6 border-gray-200 dark:border-gray-700" />
 
     <!-- API测试区域 -->
-    <div class="space-y-4">
+    <div v-if="useAI" class="space-y-4">
       <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
         API 测试
       </h3>
@@ -226,7 +280,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 提示信息 -->
+    <!-- 提示信息
     <div
       class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg"
     >
@@ -247,7 +301,7 @@ onMounted(() => {
         <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">Tab</code>
         键接受补全项。
       </p>
-    </div>
+    </div> -->
   </div>
 </template>
 

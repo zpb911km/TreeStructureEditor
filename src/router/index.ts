@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import Editor from "../views/Editor.vue";
+import Editor from "../views/EditorView.vue";
 import Settings from "../views/Settings.vue";
 import FileBrowserView from "../views/FileBrowserView.vue";
 
