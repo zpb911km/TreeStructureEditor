@@ -236,8 +236,7 @@ const canMoveDown = computed(
           />
         </div>
         <div v-else>
-          <div
-            v-if="isEditing">
+          <div v-if="isEditing">
             <FloatEditor
               v-if="padMode"
               v-model="localContent"

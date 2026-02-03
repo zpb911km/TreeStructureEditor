@@ -19,8 +19,8 @@ const handleToggleConfig = async () => {
 
 onMounted(async () => {
   await loadConfig().then((config) => {
-    darkMode.value = config.darkMode? config.darkMode : false;
-    padMode.value = config.padMode? config.padMode : false;
+    darkMode.value = config.darkMode ? config.darkMode : false;
+    padMode.value = config.padMode ? config.padMode : false;
   });
 });
 </script>
@@ -136,7 +136,7 @@ onMounted(async () => {
             <span class="text-3xl mr-3">⌨️</span>
             输入设置
           </h2>
-          
+
           <!-- 平板模式开关 -->
           <div
             class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
