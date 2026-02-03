@@ -30,5 +30,5 @@ export interface FileNode {
 export interface Config {
   useAI?: boolean;
   darkMode?: boolean;
-  padMode?: string;
+  padMode?: boolean;
 }

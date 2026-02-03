@@ -31,7 +31,7 @@ const getClipboardSelection = () => {
 };
 
 // 提供剪贴板功能给子组件
-provide('internalClipboard', {
+provide("internalClipboard", {
   text: clipboardText,
   selection: clipboardSelection,
   setText: setClipboardText,

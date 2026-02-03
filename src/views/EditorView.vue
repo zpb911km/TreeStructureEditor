@@ -12,7 +12,13 @@ import {
 } from "../utils/notifications";
 import { initAISuggestionService } from "../services/aiSuggestion";
 import type { TreeNode as TreeNodeType } from "../types";
-import { loadAIConfig, loadFile, outputFile, saveFile } from "../apis";
+import {
+  loadAIConfig,
+  loadConfig,
+  loadFile,
+  outputFile,
+  saveFile,
+} from "../apis";
 import { tree, shortPath } from "../utils/tree";
 
 const router = useRouter();
@@ -352,17 +358,21 @@ const generateHTML = async (): Promise<void> => {
 onMounted(async () => {
   setupAutoSave();
 
-  // 初始化 AI 建议服务 - 从配置文件加载
-  loadAIConfig().then(async (config) => {
-    if (config) {
-      console.log("[Editor] Initializing AI suggestion service from config");
-      initAISuggestionService(config);
-    } else {
-      console.warn(
-        "[Editor] No AI config found. AI suggestions will not be available.",
-      );
-    }
-  });
+  const config = await loadConfig();
+  const useAI = config.useAI;
+  if (useAI) {
+    // 初始化 AI 建议服务 - 从配置文件加载
+    loadAIConfig().then(async (config) => {
+      if (config) {
+        console.log("[Editor] Initializing AI suggestion service from config");
+        initAISuggestionService(config);
+      } else {
+        console.warn(
+          "[Editor] No AI config found. AI suggestions will not be available.",
+        );
+      }
+    });
+  }
 
   // 检查是否有文件路径参数
   const filePath = route.query.file as string;

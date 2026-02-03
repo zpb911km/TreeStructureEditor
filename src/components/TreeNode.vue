@@ -2,7 +2,9 @@
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import type { TreeNode } from "../types";
 import { fullMarkdownParser, renderMath } from "../utils/markdown";
-import Editor from "./Editor.vue";
+import RichEditor from "./RichEditor.vue";
+import FloatEditor from "./FloatEditor.vue";
+import { loadConfig } from "../apis";
 interface Props {
   node: TreeNode;
   level?: number;
@@ -21,6 +23,7 @@ const props = withDefaults(defineProps<Props>(), {
   nodeIndex: 0,
 });
 const emit = defineEmits<Emits>();
+const padMode = ref(false);
 const isEditing = ref(false);
 const localContent = ref(props.node.content || "");
 const expanded = ref(true);
@@ -30,9 +33,13 @@ const nodeRef = ref<HTMLElement | null>(null);
 const checkMobile = () => {
   isMobile.value = window.innerWidth < 768;
 };
-onMounted(() => {
+onMounted(async () => {
   checkMobile();
   window.addEventListener("resize", checkMobile);
+
+  // 加载配置
+  const config = await loadConfig();
+  padMode.value = config.padMode ? config.padMode : false;
 
   // 初始渲染数学公式
   if (props.node.type === "leaf" && !isEditing.value) {
@@ -61,6 +68,7 @@ watch([localContent, isEditing], () => {
     });
   }
 });
+
 const handleTitleChange = (e: Event) => {
   const target = e.target as HTMLInputElement;
   emit("update", props.node.id, { title: target.value });
@@ -228,13 +236,20 @@ const canMoveDown = computed(
           />
         </div>
         <div v-else>
-          <Editor
-            v-if="isEditing"
-            v-model="localContent"
-            @blur="isEditing = false"
-          />
           <div
-            v-else
+            v-if="isEditing">
+            <FloatEditor
+              v-if="padMode"
+              v-model="localContent"
+              @blur="isEditing = false"
+            />
+            <RichEditor
+              v-else
+              v-model="localContent"
+              @blur="isEditing = false"
+            />
+          </div>
+          <div
             class="prose prose-blue dark:prose-invert markdown-preview"
             v-html="fullMarkdownParser(localContent)"
           ></div>

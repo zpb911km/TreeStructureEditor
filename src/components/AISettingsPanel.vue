@@ -16,12 +16,11 @@ const isTesting = ref(false);
 const isSaving = ref(false);
 const useAI = ref(true);
 
-
 const loadUseAI = async () => {
   loadConfig()
     .then((config) => {
       if (config) {
-        useAI.value = config.useAI? config.useAI : false;
+        useAI.value = config.useAI ? config.useAI : false;
       }
     })
     .catch((error) => {

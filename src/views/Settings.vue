@@ -2,21 +2,26 @@
 import { ref, onMounted } from "vue";
 import AISettingsPanel from "../components/AISettingsPanel.vue";
 import { toggleDarkMode, loadDarkMode } from "../utils/theme";
+import { loadConfig, saveConfig } from "../apis";
 
 const activeTab = ref("ai");
 const darkMode = ref(false);
-
-const loadTheme = async () => {
-  darkMode.value = await loadDarkMode();
-};
-
-const handleToggleDarkMode = async () => {
-  const newMode = await toggleDarkMode();
-  darkMode.value = newMode;
+const padMode = ref(false);
+const handleToggleConfig = async () => {
+  const config = await loadConfig();
+  const newConfig = {
+    ...config,
+    darkMode: darkMode.value,
+    padMode: padMode.value,
+  };
+  await saveConfig(newConfig);
 };
 
 onMounted(async () => {
-  await loadTheme();
+  await loadConfig().then((config) => {
+    darkMode.value = config.darkMode? config.darkMode : false;
+    padMode.value = config.padMode? config.padMode : false;
+  });
 });
 </script>
 
@@ -110,7 +115,7 @@ onMounted(async () => {
               <input
                 type="checkbox"
                 v-model="darkMode"
-                @change="handleToggleDarkMode"
+                @change="toggleDarkMode"
                 class="sr-only peer"
               />
               <div
@@ -131,17 +136,30 @@ onMounted(async () => {
             <span class="text-3xl mr-3">⌨️</span>
             输入设置
           </h2>
+          
+          <!-- 平板模式开关 -->
           <div
             class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
           >
             <div>
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-                自动换行
+                平板模式
               </h3>
               <p class="text-sm text-gray-600 dark:text-gray-400">
-                自动换行以保持代码的格式
+                启用平板模式以适应受限输入环境
               </p>
             </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                v-model="padMode"
+                @change="handleToggleConfig"
+                class="sr-only peer"
+              />
+              <div
+                class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
+              ></div>
+            </label>
           </div>
         </div>
       </div>
