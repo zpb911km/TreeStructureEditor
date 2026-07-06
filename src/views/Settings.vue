@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import AISettingsPanel from "../components/AISettingsPanel.vue";
-import { toggleDarkMode, loadDarkMode } from "../utils/theme";
+import { toggleDarkMode } from "../utils/theme";
 import { loadConfig, saveConfig } from "../apis";
 
 const activeTab = ref("ai");

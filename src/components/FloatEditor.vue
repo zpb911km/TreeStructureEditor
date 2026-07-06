@@ -1,358 +1,373 @@
 <template>
   <div
-    ref="floatContainer"
-    class="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl overflow-hidden flex flex-col"
-    :style="containerStyle"
+    style="
+      background-color: rgba(0, 0, 0, 0.01);
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 49;
+    "
+    @click=""
+    @wheel=""
+    @touchstart=""
   >
-    <!-- 标题栏 -->
     <div
-      ref="dragHandle"
-      class="bg-emerald-500 dark:bg-emerald-600 text-white px-4 py-2 cursor-move flex justify-between items-center select-none"
-      @touchstart="handleTouchStart"
-      @touchmove="handleTouchMove"
-      @touchend="handleTouchEnd"
-      @mousedown="handleMouseDown"
+      ref="floatContainer"
+      class="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl overflow-hidden flex flex-col"
+      :style="containerStyle"
     >
-      <span class="font-semibold text-sm">编辑器</span>
-      <button
-        @click="toggleExpand"
-        class="bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded text-xs"
-      >
-        {{ isExpanded ? "▼" : "▲" }}
-      </button>
-    </div>
-
-    <div v-show="isExpanded" class="flex flex-col flex-1 relative">
-      <!-- 查找替换面板 -->
+      <!-- 标题栏 -->
       <div
-        v-if="showFindReplace"
-        class="bg-gray-100 dark:bg-gray-700 p-3 border-b dark:border-gray-600"
+        ref="dragHandle"
+        class="bg-emerald-500 dark:bg-emerald-600 text-white px-4 py-2 cursor-move flex justify-between items-center select-none"
+        @touchstart="handleTouchStart"
+        @touchmove="handleTouchMove"
+        @touchend="handleTouchEnd"
+        @mousedown="handleMouseDown"
       >
-        <div class="flex gap-2 mb-2">
-          <input
-            ref="findInput"
-            v-model="findText"
-            class="flex-1 px-3 py-2 text-sm border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            placeholder="查找..."
-            @keydown.enter="handleFindNext"
-            @keydown.esc="showFindReplace = false"
-          />
-          <button
-            @click="handleFindNext"
-            class="px-3 py-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-sm hover:bg-emerald-500 hover:text-white"
+        <span class="font-semibold text-sm">编辑器</span>
+        <button
+          @click="toggleExpand"
+          class="bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded text-xs"
+        >
+          {{ isExpanded ? "▼" : "▲" }}
+        </button>
+      </div>
+
+      <div v-show="isExpanded" class="flex flex-col flex-1 relative">
+        <!-- 查找替换面板 -->
+        <div
+          v-if="showFindReplace"
+          class="bg-gray-100 dark:bg-gray-700 p-3 border-b dark:border-gray-600"
+        >
+          <div class="flex gap-2 mb-2">
+            <input
+              ref="findInput"
+              v-model="findText"
+              class="flex-1 px-3 py-2 text-sm border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="查找..."
+              @keydown.enter="handleFindNext"
+              @keydown.esc="showFindReplace = false"
+            />
+            <button
+              @click="handleFindNext"
+              class="px-3 py-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-sm hover:bg-emerald-500 hover:text-white"
+            >
+              🔍
+            </button>
+            <button
+              @click="handleFindPrev"
+              class="px-3 py-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-sm hover:bg-emerald-500 hover:text-white"
+            >
+              ◀
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <input
+              v-model="replaceText"
+              class="flex-1 px-3 py-2 text-sm border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="替换..."
+              @keydown.enter="handleReplace"
+            />
+            <button
+              @click="handleReplace"
+              class="px-3 py-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-sm hover:bg-emerald-500 hover:text-white"
+            >
+              替换
+            </button>
+            <button
+              @click="handleReplaceAll"
+              class="px-3 py-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-sm hover:bg-emerald-500 hover:text-white"
+            >
+              全部
+            </button>
+            <button
+              @click="showFindReplace = false"
+              class="px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
+            >
+              ✕
+            </button>
+          </div>
+          <div
+            v-if="findResult"
+            class="text-xs text-gray-500 dark:text-gray-400 mt-2"
           >
-            🔍
-          </button>
-          <button
-            @click="handleFindPrev"
-            class="px-3 py-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-sm hover:bg-emerald-500 hover:text-white"
-          >
-            ◀
-          </button>
+            {{ findResult }}
+          </div>
         </div>
-        <div class="flex gap-2">
-          <input
-            v-model="replaceText"
-            class="flex-1 px-3 py-2 text-sm border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            placeholder="替换..."
-            @keydown.enter="handleReplace"
-          />
-          <button
-            @click="handleReplace"
-            class="px-3 py-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-sm hover:bg-emerald-500 hover:text-white"
+
+        <!-- 符号面板 -->
+        <div
+          v-if="showSymbolPanel"
+          class="bg-gray-100 dark:bg-gray-700 p-3 border-b dark:border-gray-600 max-h-48 overflow-y-auto relative"
+        >
+          <div class="flex gap-1 mb-2 overflow-x-auto pb-1">
+            <button
+              v-for="tab in symbolTabs"
+              :key="tab.id"
+              :class="[
+                'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap',
+                activeSymbolTab === tab.id
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-white dark:bg-gray-600 dark:text-white',
+              ]"
+              @click="activeSymbolTab = tab.id"
+            >
+              {{ tab.name }}
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-1">
+            <button
+              v-for="symbol in currentSymbols"
+              :key="symbol"
+              class="w-8 h-8 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-base flex items-center justify-center hover:bg-emerald-500 hover:text-white dark:text-white"
+              @click="insertSymbol(symbol)"
+            >
+              {{ symbol }}
+            </button>
+          </div>
+          <!-- Unicode 分页控制 -->
+          <div
+            v-if="activeSymbolTab === 'unicode'"
+            class="flex items-center justify-center gap-2 mt-2 pt-2 border-t dark:border-gray-600"
           >
-            替换
-          </button>
+            <button
+              @click="prevUnicodePage"
+              :disabled="unicodePage === 0"
+              :class="[
+                'px-2 py-1 text-xs rounded',
+                unicodePage === 0
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'bg-white dark:bg-gray-600 hover:bg-emerald-500 hover:text-white dark:text-white',
+              ]"
+            >
+              ◀
+            </button>
+            <span class="text-xs text-gray-600 dark:text-gray-400"
+              >{{ unicodePage + 1 }} / {{ totalUnicodePages }}</span
+            >
+            <button
+              @click="nextUnicodePage"
+              :disabled="unicodePage >= totalUnicodePages - 1"
+              :class="[
+                'px-2 py-1 text-xs rounded',
+                unicodePage >= totalUnicodePages - 1
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'bg-white dark:bg-gray-600 hover:bg-emerald-500 hover:text-white dark:text-white',
+              ]"
+            >
+              ▶
+            </button>
+          </div>
           <button
-            @click="handleReplaceAll"
-            class="px-3 py-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-sm hover:bg-emerald-500 hover:text-white"
-          >
-            全部
-          </button>
-          <button
-            @click="showFindReplace = false"
-            class="px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
+            @click="showSymbolPanel = false"
+            class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
           >
             ✕
           </button>
         </div>
+
+        <!-- Markdown 面板 -->
         <div
-          v-if="findResult"
-          class="text-xs text-gray-500 dark:text-gray-400 mt-2"
+          v-if="showMarkdownPanel"
+          class="bg-gray-100 dark:bg-gray-700 p-3 border-b dark:border-gray-600 max-h-44 overflow-y-auto relative"
         >
-          {{ findResult }}
+          <div class="grid grid-cols-5 gap-2">
+            <button
+              v-for="item in markdownItems"
+              :key="item.name"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+              @click="insertMarkdown(item)"
+            >
+              <!-- <span class="text-lg">{{ item.icon }}</span> -->
+              <span>{{ item.name }}</span>
+            </button>
+          </div>
+          <button
+            @click="showMarkdownPanel = false"
+            class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
+          >
+            ✕
+          </button>
         </div>
-      </div>
 
-      <!-- 符号面板 -->
-      <div
-        v-if="showSymbolPanel"
-        class="bg-gray-100 dark:bg-gray-700 p-3 border-b dark:border-gray-600 max-h-48 overflow-y-auto relative"
-      >
-        <div class="flex gap-1 mb-2 overflow-x-auto pb-1">
-          <button
-            v-for="tab in symbolTabs"
-            :key="tab.id"
-            :class="[
-              'px-3 py-1.5 text-xs rounded-lg whitespace-nowrap',
-              activeSymbolTab === tab.id
-                ? 'bg-emerald-500 text-white'
-                : 'bg-white dark:bg-gray-600 dark:text-white',
-            ]"
-            @click="activeSymbolTab = tab.id"
-          >
-            {{ tab.name }}
-          </button>
-        </div>
-        <div class="flex flex-wrap gap-1">
-          <button
-            v-for="symbol in currentSymbols"
-            :key="symbol"
-            class="w-8 h-8 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-base flex items-center justify-center hover:bg-emerald-500 hover:text-white dark:text-white"
-            @click="insertSymbol(symbol)"
-          >
-            {{ symbol }}
-          </button>
-        </div>
-        <!-- Unicode 分页控制 -->
+        <!-- 编辑操作面板 -->
         <div
-          v-if="activeSymbolTab === 'unicode'"
-          class="flex items-center justify-center gap-2 mt-2 pt-2 border-t dark:border-gray-600"
+          v-if="showEditPanel"
+          class="bg-gray-100 dark:bg-gray-700 p-3 border-b dark:border-gray-600 max-h-48 overflow-y-auto relative"
         >
+          <div class="grid grid-cols-9 gap-2">
+            <button
+              @click="insertNewline"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">↵</span>
+            </button>
+            <button
+              @click="insertIndent"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">⤵</span>
+            </button>
+            <button
+              @click="insertBackspace"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">⌫</span>
+            </button>
+            <button
+              @click="insertSpace"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">␣</span>
+            </button>
+            <button
+              @click="insertDelete"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">⌦</span>
+            </button>
+            <button
+              @click="selectAll"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">⎔</span>
+            </button>
+            <button
+              @click="copyText"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">⧉</span>
+            </button>
+            <button
+              @click="cutText"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">✂</span>
+            </button>
+            <button
+              @click="pasteText"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">📋</span>
+            </button>
+            <button
+              @click="duplicateLine"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">⧉⤵</span>
+            </button>
+            <button
+              @click="deleteLine"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">✕⤵</span>
+            </button>
+            <button
+              @click="moveLineUp"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">↑⤵</span>
+            </button>
+            <button
+              @click="moveLineDown"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+            >
+              <span class="text-xs">↓⤵</span>
+            </button>
+            <button
+              @click="handleUndo"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+              :disabled="!canUndo"
+              title="撤销"
+            >
+              ↩️
+            </button>
+            <button
+              @click="handleRedo"
+              class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
+              :disabled="!canRedo"
+              title="重做"
+            >
+              ↪️
+            </button>
+          </div>
           <button
-            @click="prevUnicodePage"
-            :disabled="unicodePage === 0"
-            :class="[
-              'px-2 py-1 text-xs rounded',
-              unicodePage === 0
-                ? 'opacity-50 cursor-not-allowed'
-                : 'bg-white dark:bg-gray-600 hover:bg-emerald-500 hover:text-white dark:text-white',
-            ]"
+            @click="showEditPanel = false"
+            class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
           >
-            ◀
-          </button>
-          <span class="text-xs text-gray-600 dark:text-gray-400"
-            >{{ unicodePage + 1 }} / {{ totalUnicodePages }}</span
-          >
-          <button
-            @click="nextUnicodePage"
-            :disabled="unicodePage >= totalUnicodePages - 1"
-            :class="[
-              'px-2 py-1 text-xs rounded',
-              unicodePage >= totalUnicodePages - 1
-                ? 'opacity-50 cursor-not-allowed'
-                : 'bg-white dark:bg-gray-600 hover:bg-emerald-500 hover:text-white dark:text-white',
-            ]"
-          >
-            ▶
+            ✕
           </button>
         </div>
-        <button
-          @click="showSymbolPanel = false"
-          class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
-        >
-          ✕
-        </button>
-      </div>
 
-      <!-- Markdown 面板 -->
-      <div
-        v-if="showMarkdownPanel"
-        class="bg-gray-100 dark:bg-gray-700 p-3 border-b dark:border-gray-600 max-h-44 overflow-y-auto relative"
-      >
-        <div class="grid grid-cols-5 gap-2">
+        <!-- 文本编辑区域 -->
+        <textarea
+          ref="textareaRef"
+          v-model="localValue"
+          class="flex-1 w-full p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 resize-none font-mono text-sm leading-relaxed focus:outline-none whitespace-pre-wrap"
+          @input="handleInput"
+          @keydown="handleKeydown"
+          @select="handleTextSelect"
+          spellcheck="false"
+        ></textarea>
+
+        <!-- 工具栏 -->
+        <div
+          class="flex gap-1 p-2 bg-gray-100 dark:bg-gray-700 border-t dark:border-gray-600 flex-wrap"
+        >
           <button
-            v-for="item in markdownItems"
-            :key="item.name"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-            @click="insertMarkdown(item)"
+            @click="toggleFindReplace"
+            class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
+            title="查找替换"
           >
-            <!-- <span class="text-lg">{{ item.icon }}</span> -->
-            <span>{{ item.name }}</span>
+            🔍
+          </button>
+          <button
+            @click="handleComplete"
+            class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
+            title="AI补全"
+          >
+            ✨
+          </button>
+          <button
+            @click="toggleEditPanel"
+            class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
+            title="编辑操作"
+          >
+            ⌨️
+          </button>
+          <button
+            @click="toggleSymbolPanel"
+            class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
+            title="符号"
+          >
+            🔣
+          </button>
+          <button
+            @click="toggleMarkdownPanel"
+            class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
+            title="Markdown"
+          >
+            📝
+          </button>
+          <button
+            @click="handleSave"
+            class="flex-1 min-w-10 h-10 bg-blue-500 text-white border border-blue-500 rounded-lg flex items-center justify-center text-lg hover:bg-blue-600"
+            title="保存"
+          >
+            💾
           </button>
         </div>
-        <button
-          @click="showMarkdownPanel = false"
-          class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
-        >
-          ✕
-        </button>
+
+        <!-- 调整大小手柄 -->
+        <div
+          class="absolute bottom-14 right-0 w-6 h-6 cursor-se-resize bg-gradient-to-tl from-emerald-500 to-transparent rounded-tl-lg"
+          @touchstart="handleResizeStart"
+          @mousedown="handleResizeMouseDown"
+        ></div>
       </div>
-
-      <!-- 编辑操作面板 -->
-      <div
-        v-if="showEditPanel"
-        class="bg-gray-100 dark:bg-gray-700 p-3 border-b dark:border-gray-600 max-h-48 overflow-y-auto relative"
-      >
-        <div class="grid grid-cols-9 gap-2">
-          <button
-            @click="insertNewline"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">↵</span>
-          </button>
-          <button
-            @click="insertIndent"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">⤵</span>
-          </button>
-          <button
-            @click="insertBackspace"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">⌫</span>
-          </button>
-          <button
-            @click="insertSpace"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">␣</span>
-          </button>
-          <button
-            @click="insertDelete"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">⌦</span>
-          </button>
-          <button
-            @click="selectAll"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">⎔</span>
-          </button>
-          <button
-            @click="copyText"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">⧉</span>
-          </button>
-          <button
-            @click="cutText"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">✂</span>
-          </button>
-          <button
-            @click="pasteText"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">📋</span>
-          </button>
-          <button
-            @click="duplicateLine"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">⧉⤵</span>
-          </button>
-          <button
-            @click="deleteLine"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">✕⤵</span>
-          </button>
-          <button
-            @click="moveLineUp"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">↑⤵</span>
-          </button>
-          <button
-            @click="moveLineDown"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-          >
-            <span class="text-xs">↓⤵</span>
-          </button>
-          <button
-            @click="handleUndo"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-            :disabled="!canUndo"
-            title="撤销"
-          >
-            ↩️
-          </button>
-          <button
-            @click="handleRedo"
-            class="p-2 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg text-xs flex flex-col items-center gap-1 hover:bg-emerald-500 hover:text-white dark:text-white"
-            :disabled="!canRedo"
-            title="重做"
-          >
-            ↪️
-          </button>
-        </div>
-        <button
-          @click="showEditPanel = false"
-          class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
-        >
-          ✕
-        </button>
-      </div>
-
-      <!-- 文本编辑区域 -->
-      <textarea
-        ref="textareaRef"
-        v-model="localValue"
-        class="flex-1 w-full p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 resize-none font-mono text-sm leading-relaxed focus:outline-none whitespace-pre-wrap"
-        @input="handleInput"
-        @keydown="handleKeydown"
-        @select="handleTextSelect"
-        spellcheck="false"
-      ></textarea>
-
-      <!-- 工具栏 -->
-      <div
-        class="flex gap-1 p-2 bg-gray-100 dark:bg-gray-700 border-t dark:border-gray-600 flex-wrap"
-      >
-        <button
-          @click="toggleFindReplace"
-          class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
-          title="查找替换"
-        >
-          🔍
-        </button>
-        <button
-          @click="handleComplete"
-          class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
-          title="AI补全"
-        >
-          ✨
-        </button>
-        <button
-          @click="toggleEditPanel"
-          class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
-          title="编辑操作"
-        >
-          ⌨️
-        </button>
-        <button
-          @click="toggleSymbolPanel"
-          class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
-          title="符号"
-        >
-          🔣
-        </button>
-        <button
-          @click="toggleMarkdownPanel"
-          class="flex-1 min-w-10 h-10 bg-white dark:bg-gray-600 border dark:border-gray-500 rounded-lg flex items-center justify-center text-lg hover:bg-emerald-500 hover:text-white dark:text-white"
-          title="Markdown"
-        >
-          📝
-        </button>
-        <button
-          @click="handleSave"
-          class="flex-1 min-w-10 h-10 bg-blue-500 text-white border border-blue-500 rounded-lg flex items-center justify-center text-lg hover:bg-blue-600"
-          title="保存"
-        >
-          💾
-        </button>
-      </div>
-
-      <!-- 调整大小手柄 -->
-      <div
-        class="absolute bottom-14 right-0 w-6 h-6 cursor-se-resize bg-gradient-to-tl from-emerald-500 to-transparent rounded-tl-lg"
-        @touchstart="handleResizeStart"
-        @mousedown="handleResizeMouseDown"
-      ></div>
     </div>
   </div>
 </template>
@@ -451,7 +466,7 @@ const allUnicodeSymbols = generateUnicodeSymbols();
 
 const symbolLibrary = {
   common:
-    "! ? , . ; : ' \" ( ) [ ] { } / \\ @ # $ % ^ & * _ - + = ~ | < > ` ~".split(
+    "! ? , . ; : ' \" ( ) [ ] { } / \\ @ # $ % ^ & * _ - + = ~ | < > ` ~ 《 》".split(
       " ",
     ),
   math: "× ÷ ± ≠ ≤ ≥ ≈ ∞ ∂ ∇ ∑ ∏ ∫ √ π φ θ α β γ δ ε λ μ σ ω ∪ ∩ ∈ ∉ ∀ ∃ ∅ ℜ ℑ".split(
@@ -1263,18 +1278,12 @@ const handleMouseUp = () => {
 };
 
 let touchStartPos = { x: 0, y: 0 };
-let touchOffset = { x: 0, y: 0 };
 
 const handleTouchStart = (e: TouchEvent) => {
   e.stopPropagation();
   if (!floatContainer.value) return;
   const touch = e.touches[0];
   touchStartPos = { x: touch.clientX, y: touch.clientY };
-  const rect = floatContainer.value.getBoundingClientRect();
-  touchOffset = {
-    x: touch.clientX - rect.left,
-    y: touch.clientY - rect.top,
-  };
   isDragging.value = true;
 };
 
