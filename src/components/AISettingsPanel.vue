@@ -3,11 +3,14 @@ import { ref, onMounted } from "vue";
 import { showSuccess, showError } from "../utils/notifications";
 import { AIConfig } from "../types";
 import { loadAIConfig, loadConfig, saveAIConfig, saveConfig } from "../apis";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 const config = ref<AIConfig>({
   apiKey: "",
   baseURL: "https://api.openai.com/v1",
   model: "gpt-3.5-turbo",
+  streamEnabled: false,
+  fimEnabled: false,
 });
 
 const testQuestion = ref("你好,请简单介绍一下你自己");
@@ -93,29 +96,32 @@ const testAPI = async () => {
   testAnswer.value = "正在请求...";
 
   try {
-    const response = await fetch(`${config.value.baseURL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${config.value.apiKey}`,
+    const response = await tauriFetch(
+      `${config.value.baseURL}/chat/completions`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.value.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.value.model,
+          messages: [
+            {
+              role: "system",
+              content: "你是一个友好的助手。",
+            },
+            {
+              role: "user",
+              content: testQuestion.value,
+            },
+          ],
+          temperature: 0.5,
+          max_tokens: 500,
+          stream: false,
+        }),
       },
-      body: JSON.stringify({
-        model: config.value.model,
-        messages: [
-          {
-            role: "system",
-            content: "你是一个友好的助手。",
-          },
-          {
-            role: "user",
-            content: testQuestion.value,
-          },
-        ],
-        temperature: 0.5,
-        max_tokens: 500,
-        stream: false,
-      }),
-    });
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -229,6 +235,37 @@ onMounted(() => {
         >
           {{ isSaving ? "保存中..." : "保存配置" }}
         </button>
+      </div>
+
+      <!-- 高级选项 -->
+      <div class="space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          高级选项
+        </h4>
+
+        <label class="flex items-center justify-between cursor-pointer">
+          <span class="text-sm text-gray-600 dark:text-gray-400">
+            流式输出
+            <span class="text-xs text-gray-400 ml-1">(stream)</span>
+          </span>
+          <input
+            type="checkbox"
+            v-model="config.streamEnabled"
+            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </label>
+
+        <label class="flex items-center justify-between cursor-pointer">
+          <span class="text-sm text-gray-600 dark:text-gray-400">
+            FIM 模式
+            <span class="text-xs text-gray-400 ml-1">(Fill-in-Middle)</span>
+          </span>
+          <input
+            type="checkbox"
+            v-model="config.fimEnabled"
+            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </label>
       </div>
     </div>
 

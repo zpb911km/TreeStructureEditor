@@ -40,6 +40,13 @@
           "path": "$APPLOCALDATA/**/*"
         }
       ]
+    },
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://*/*" },
+        { "url": "http://*/*" }
+      ]
     }
   ]
 }
