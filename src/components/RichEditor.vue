@@ -206,7 +206,7 @@ function forceInlineSuggestRefresh() {
         text: "",
       },
     ],
-    () => [pos],
+    () => [new monaco.Selection(pos.lineNumber, pos.column, pos.lineNumber, pos.column)],
   );
   isAIEdit = false;
 }

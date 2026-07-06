@@ -63,10 +63,10 @@ watch(
     <nav
       class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 shadow-lg z-50"
     >
-      <div class="flex items-center justify-around max-w-md mx-auto h-full">
+      <div class="flex items-center justify-around max-w-lg mx-auto h-full">
         <router-link
           to="/"
-          class="flex flex-col items-center px-2 py-2 w-1/3 h-full"
+          class="flex flex-col items-center px-2 py-2 w-1/4 h-full"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -89,7 +89,7 @@ watch(
 
         <router-link
           to="/files"
-          class="flex flex-col items-center px-2 py-2 w-1/3 h-full"
+          class="flex flex-col items-center px-2 py-2 w-1/4 h-full"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -111,8 +111,31 @@ watch(
         </router-link>
 
         <router-link
+          to="/ai-chat"
+          class="flex flex-col items-center px-2 py-2 w-1/4 h-full"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 text-gray-600 dark:text-slate-300"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+            />
+          </svg>
+          <span class="text-xs mt-1 text-gray-600 dark:text-slate-300"
+            >AI Chat</span
+          >
+        </router-link>
+
+        <router-link
           to="/settings"
-          class="flex flex-col items-center px-2 py-2 w-1/3 h-full"
+          class="flex flex-col items-center px-2 py-2 w-1/4 h-full"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
