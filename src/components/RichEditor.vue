@@ -7,7 +7,6 @@ import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import * as monaco from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import { getAISuggestionService } from "../services/aiSuggestion";
-import { showInfo } from "../utils/notifications";
 import { loadDarkMode } from "../utils/theme";
 
 const props = defineProps({
@@ -36,13 +35,17 @@ interface StreamSession {
 
 let currentStream: StreamSession | null = null;
 
-// ── 幽灵文本状态 ──────────────────────────────────────────
-let ghostTextDecorations: monaco.editor.IEditorDecorationsCollection | null =
-  null;
-let isGhostTextActive = false;
-/** 标志当前 edit 是否为 AI 插入，用于区分用户输入 vs AI 写入 */
+// ── Inline Suggestion 状态 ───────────────────────────────
+/**
+ * 当前要展示的 Inline Suggestion。
+ * provideInlineCompletions 会从这里读取数据，
+ * Monaco 将其渲染为真正的幽灵文本（不修改文档内容）。
+ */
+let currentInlineSuggestion: string | null = null;
+/** 补全生成时的光标位置，用于 provider 判断是否还在原位 */
+let suggestionPosition: { lineNumber: number; column: number } | null = null;
+/** 标记当前编辑是否为 AI 写入，用于跳过 content change 处理 */
 let isAIEdit = false;
-let keyDownListener: monaco.IDisposable | null = null;
 
 // 更新 Monaco Editor 主题
 const updateEditorTheme = async () => {
@@ -102,48 +105,33 @@ onMounted(() => {
     attributeFilter: ["class"],
   });
 
-  // ✅ 注册 AI 快捷键 (Alt+\) 手动触发补全 + 空的 inline provider
+  // ✅ 注册 AI 快捷键 (Ctrl+\) + 真正的 Inline Suggestion Provider
   registerAISuggestionShortcut();
-  registerAIProviderStub();
+  registerInlineSuggestionProvider();
 
-  // ✅ 键盘监听：Alt+\ 触发补全，Tab 接受幽灵文本
-  keyDownListener = editorInstance.onKeyDown((e) => {
-    const browserEvent = e.browserEvent as KeyboardEvent;
-
-    // Tab → 接受幽灵文本
-    if (e.keyCode === monaco.KeyCode.Tab && isGhostTextActive) {
-      e.preventDefault();
-      e.stopPropagation();
-      acceptGhostText();
-      return;
-    }
-
-    // Alt+\ → 手动触发 AI 补全
-    if (browserEvent.key === "\\" && browserEvent.altKey) {
+  // ✅ 键盘监听：Ctrl+\ 触发补全（addAction 的 keybindings 可能不稳定，这里做双重保障）
+  editorInstance.onKeyDown((e) => {
+    if (
+      (e.browserEvent as KeyboardEvent).key === "\\" &&
+      (e.browserEvent as KeyboardEvent).ctrlKey
+    ) {
       e.preventDefault();
       e.stopPropagation();
       triggerCompletion();
-      return;
     }
   });
 
-  // ✅ 监听内容变化：区分 AI 编辑 vs 用户输入
+  // ✅ 用户输入 → 取消流式请求（Monaco 会自动隐藏 inline suggestion）
   contentChangeListener = editorInstance.onDidChangeModelContent(() => {
+    // AI 内部操作（如 ZWS 触发/幽灵文本清除）跳过处理
     if (isAIEdit) return;
 
-    // 用户输入 → 移除幽灵文本 + 取消流
-    if (isGhostTextActive) {
-      removeGhostTextInternal();
-    }
+    // 用户主动输入时，清除过期的 suggestion 状态
+    currentInlineSuggestion = null;
+    suggestionPosition = null;
     abortCurrentStream();
-  });
-
-  // 监听内容变化，实现双向绑定（跳过 AI 编辑）
-  editorInstance.onDidChangeModelContent(() => {
-    if (!isAIEdit) {
-      emit("update:modelValue", editorInstance!.getValue());
-      adjustEditorHeight();
-    }
+    emit("update:modelValue", editorInstance!.getValue());
+    adjustEditorHeight();
   });
 
   // 监听失去焦点事件
@@ -168,7 +156,70 @@ function abortCurrentStream() {
   }
 }
 
-/** 手动触发一次流式 AI 补全会话（无位置限制） */
+/**
+ * 强制 Monaco 重新求值内联建议（幽灵文本）。
+ *
+ * ⚠️ Monaco 0.55.1 源码分析：
+ *   `editor.action.inlineSuggest.trigger` 命令通过 `asyncTransaction` 交易系统
+ *   执行 → `model.trigger(tx, ...)`. 但独立包的交易系统 (tx) 不完整，
+ *   命令静默失败，provider 不会被调用。
+ *
+ *   **正常工作的路径**：用户打字 → `onDidType` 事件 → `model.trigger()` (无 tx) → provider.
+ *
+ * 这里的策略：
+ *   1. 先尝试命令（可能在部分版本中生效）
+ *   2. 使用 `type` 命令插入零宽空格（\u200B）→ 触发 `onDidType` → `model.trigger()`
+ *   3. 在同一同步块中用 pushEditOperations 删除 ZWS（不可见，isAIEdit 跳过事件处理）
+ *
+ *   ZWS 插入和删除在同一微任务中完成，用户无感知，文档最终不受影响。
+ */
+function forceInlineSuggestRefresh() {
+  if (!editorInstance) return;
+  const ed = editorInstance;
+
+  // 尝试命令触发（部分构建可能支持）
+  try {
+    ed.trigger("keyboard", "editor.action.inlineSuggest.trigger", {});
+  } catch {
+    /* ignore */
+  }
+
+  // 核心：通过 type 命令插入 ZWS，触发 onDidType → model.trigger()
+  const model = ed.getModel();
+  const pos = ed.getPosition();
+  if (!model || !pos) return;
+
+  isAIEdit = true;
+  // 插入 ZWS → 触发 onDidType → model.trigger() → provider 被调用
+  ed.trigger("keyboard", "type", { text: "\u200B" });
+  // 立即删除 ZWS → 文档恢复原状
+  model.pushEditOperations(
+    null,
+    [
+      {
+        range: new monaco.Range(
+          pos.lineNumber,
+          pos.column,
+          pos.lineNumber,
+          pos.column + 1,
+        ),
+        text: "",
+      },
+    ],
+    () => [pos],
+  );
+  isAIEdit = false;
+}
+
+/**
+ * 手动触发一次流式 AI 补全，使用 Monaco 原生 Inline Suggestion 显示。
+ *
+ * 流程：
+ *   1. 发起流式请求
+ *   2. 每个 token 到达 → 更新 currentInlineSuggestion
+ *   3. forceInlineSuggestRefresh() → Monaco 调用 provider → 渲染幽灵文本
+ *   4. 用户按 Tab 接受 / 继续输入自动消失
+ */
 function triggerCompletion() {
   if (!editorInstance) return;
 
@@ -178,11 +229,14 @@ function triggerCompletion() {
   const aiService = getAISuggestionService();
   if (!aiService) return;
 
-  // 取消已有的流 + 清理幽灵文本
+  // 取消已有流
   abortCurrentStream();
-  removeGhostTextInternal();
+  // 清除之前的 inline suggestion
+  currentInlineSuggestion = null;
+  suggestionPosition = null;
 
   const position = editorInstance.getPosition() || { lineNumber: 1, column: 1 };
+  suggestionPosition = { ...position };
 
   const abortController = new AbortController();
   currentStream = {
@@ -192,6 +246,10 @@ function triggerCompletion() {
     triggerDebounce: null,
   };
 
+  // 首次触发 provider（即使还没数据，让 Monaco 进入"待命"状态）
+  currentInlineSuggestion = "";
+  forceInlineSuggestRefresh();
+
   aiService
     .getSuggestionStream(
       model.getValue(),
@@ -199,16 +257,25 @@ function triggerCompletion() {
       (text: string) => {
         if (!currentStream || !currentStream.active) return;
         currentStream.accumulated = text;
-        setGhostText(text, position);
+
+        // 更新数据后强制重新触发 provider
+        currentInlineSuggestion = text;
+        forceInlineSuggestRefresh();
       },
       abortController.signal,
     )
     .then((finalText) => {
       if (currentStream) {
         currentStream.active = false;
-        if (finalText && editorInstance) {
-          setGhostText(finalText, editorInstance.getPosition() ?? position);
+        if (finalText) {
+          currentInlineSuggestion = finalText;
+          forceInlineSuggestRefresh();
+        } else {
+          currentInlineSuggestion = null;
+          suggestionPosition = null;
+          forceInlineSuggestRefresh();
         }
+        currentStream = null;
       }
       console.log(
         "[Editor] Stream completed, final length:",
@@ -216,143 +283,22 @@ function triggerCompletion() {
       );
     })
     .catch((err) => {
-      console.error("[Editor] Stream error:", err);
+      if (err?.name !== "AbortError") {
+        console.error("[Editor] Stream error:", err);
+      }
+      currentInlineSuggestion = null;
+      suggestionPosition = null;
       if (currentStream) {
         currentStream.active = false;
         currentStream = null;
       }
-      removeGhostTextInternal();
+      // 触发空渲染来清除 inline suggest
+      forceInlineSuggestRefresh();
     });
 }
 
-// ── 幽灵文本管理 ────────────────────────────────────────────
-
-/** 将光标位置转换为 Monaco Position */
-function toPos(p: { lineNumber: number; column: number }): monaco.Position {
-  return new monaco.Position(p.lineNumber, p.column);
-}
-
-/** 在指定位置插入/更新幽灵文本 */
-function setGhostText(
-  text: string,
-  insertAt: { lineNumber: number; column: number },
-) {
-  if (!editorInstance) return;
-  const ed = editorInstance;
-  const model = ed.getModel();
-  if (!model) return;
-
-  // 先删旧的
-  removeGhostTextInternal();
-
-  if (!text || text.trim() === "") return;
-
-  // 缩进对齐
-  const lineContent = model.getLineContent(insertAt.lineNumber);
-  const leadingWs = lineContent.match(/^\s*/)?.[0] || "";
-  const aligned = text
-    .split("\n")
-    .map((ln, i) => (i === 0 ? ln : leadingWs + ln))
-    .join("\n");
-
-  const insertRange = new monaco.Range(
-    insertAt.lineNumber,
-    insertAt.column,
-    insertAt.lineNumber,
-    insertAt.column,
-  );
-
-  isAIEdit = true;
-  model.pushEditOperations(
-    undefined,
-    [{ range: insertRange, text: aligned }],
-    () => [toPos(insertAt)],
-  );
-  isAIEdit = false;
-
-  // 计算实际插入的结束位置
-  const lines = aligned.split("\n");
-  const endLine = insertAt.lineNumber + lines.length - 1;
-  const endCol =
-    lines.length === 1
-      ? insertAt.column + aligned.length
-      : lines[lines.length - 1].length + 1;
-
-  const ghostRange = new monaco.Range(
-    insertAt.lineNumber,
-    insertAt.column,
-    endLine,
-    endCol,
-  );
-
-  ghostTextDecorations = model.createDecorationsCollection([
-    {
-      range: ghostRange,
-      options: { inlineClassName: "ai-ghost-text-decoration" },
-    },
-  ]);
-
-  isGhostTextActive = true;
-}
-
-/** 从文档中移除幽灵文本内容 + 清除装饰 */
-function removeGhostTextInternal() {
-  if (!isGhostTextActive || !editorInstance) return;
-  const ed = editorInstance;
-  const model = ed.getModel();
-  if (!model) return;
-
-  const ranges = ghostTextDecorations?.getRanges() ?? [];
-  if (ranges.length === 0) {
-    clearGhostTextDecorations();
-    return;
-  }
-
-  const deleteRange = ranges[0];
-  const cursorBack = new monaco.Position(
-    deleteRange.startLineNumber,
-    deleteRange.startColumn,
-  );
-
-  isAIEdit = true;
-  model.pushEditOperations(
-    undefined,
-    [{ range: deleteRange, text: "" }],
-    () => [cursorBack],
-  );
-  isAIEdit = false;
-
-  clearGhostTextDecorations();
-}
-
-function clearGhostTextDecorations() {
-  ghostTextDecorations?.clear();
-  ghostTextDecorations = null;
-  isGhostTextActive = false;
-}
-
-/** 接受幽灵文本（保留内容，仅移除装饰） */
-function acceptGhostText() {
-  if (!isGhostTextActive || !ghostTextDecorations) {
-    currentStream = null;
-    return;
-  }
-  ghostTextDecorations.clear();
-  ghostTextDecorations = null;
-  isGhostTextActive = false;
-  currentStream = null;
-
-  // 同步到父组件
-  if (editorInstance) {
-    emit("update:modelValue", editorInstance.getValue());
-    adjustEditorHeight();
-  }
-
-  showInfo("AI suggestion accepted");
-}
-
 /**
- * 注册 AI 快捷键：Alt+\ 手动触发补全
+ * 注册 AI 快捷键：Ctrl+\ 手动触发补全
  */
 const registerAISuggestionShortcut = () => {
   if (!editorInstance) return;
@@ -360,7 +306,7 @@ const registerAISuggestionShortcut = () => {
   aiTriggerAction = editorInstance.addAction({
     id: "ai-trigger-completion",
     label: "Trigger AI Completion",
-    keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.US_BSLASH],
+    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Backslash],
     contextMenuGroupId: "navigation",
     contextMenuOrder: 1.5,
     run: () => {
@@ -370,15 +316,53 @@ const registerAISuggestionShortcut = () => {
 };
 
 /**
- * 注册一个空的 inline provider（占位用，避免 Monaco 报错）
+ * 注册真正的 Inline Suggestion Provider。
+ *
+ * Monaco 在需要显示幽灵文本时调用 provideInlineCompletions，
+ * 我们从 currentInlineSuggestion 读取数据返回。
+ * 数据不存在或光标位置不匹配时返回空数组（不显示幽灵文本）。
  */
-const registerAIProviderStub = () => {
+const registerInlineSuggestionProvider = () => {
   completionProvider = monaco.languages.registerInlineCompletionsProvider(
     "markdown",
     {
-      provideInlineCompletions: async (_model, _position, _context, token) => {
+      provideInlineCompletions: (model, position, _context, token) => {
         if (token.isCancellationRequested) return { items: [] };
-        return { items: [] };
+
+        // 没有待显示的补全 → 不显示
+        if (!currentInlineSuggestion || !suggestionPosition) {
+          return { items: [] };
+        }
+
+        // 光标位置已改变 → 不显示（用户继续输入了）
+        if (
+          position.lineNumber !== suggestionPosition.lineNumber ||
+          position.column !== suggestionPosition.column
+        ) {
+          return { items: [] };
+        }
+
+        // 缩进对齐
+        const lineContent = model.getLineContent(position.lineNumber);
+        const leadingWs = lineContent.match(/^\s*/)?.[0] || "";
+        const aligned = currentInlineSuggestion
+          .split("\n")
+          .map((ln, i) => (i === 0 ? ln : leadingWs + ln))
+          .join("\n");
+
+        return {
+          items: [
+            {
+              insertText: aligned,
+              range: new monaco.Range(
+                position.lineNumber,
+                position.column,
+                position.lineNumber,
+                position.column,
+              ),
+            },
+          ],
+        };
       },
       disposeInlineCompletions: () => {
         console.log("[Editor] Disposing AI inline suggestion provider");
@@ -418,13 +402,11 @@ onBeforeUnmount(() => {
   console.log("[Editor] onBeforeUnmount - Cleaning up resources");
   // 取消正在进行的流式请求
   abortCurrentStream();
-  // 清理幽灵文本
-  removeGhostTextInternal();
-  // ✅ 清理快捷键
+  currentInlineSuggestion = null;
+  suggestionPosition = null;
+  // 清理快捷键
   aiTriggerAction?.dispose();
   aiTriggerAction = null;
-  keyDownListener?.dispose();
-  keyDownListener = null;
   contentChangeListener?.dispose();
   if (completionProvider) {
     console.log("[Editor] Disposing inlineCompletionProvider");
@@ -460,17 +442,5 @@ onBeforeUnmount(() => {
 .dark .monaco-editor-container:focus-within {
   box-shadow: 0 0 0 2px #10b981;
   border-color: #10b981;
-}
-</style>
-
-<!-- 全局样式：Monaco 内部 decoration 不受 scoped 影响 -->
-<style>
-.ai-ghost-text-decoration {
-  color: #888 !important;
-  font-style: italic !important;
-  opacity: 0.85 !important;
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  text-underline-offset: 2px;
 }
 </style>

@@ -62,7 +62,7 @@ watch(localContent, (newContent) => {
 });
 
 watch([localContent, isEditing], () => {
-  if (!isEditing.value && nodeRef.value) {
+  if (nodeRef.value && (!isEditing.value || padMode.value)) {
     nextTick(() => {
       renderMath();
     });
@@ -248,7 +248,12 @@ const canMoveDown = computed(
               @blur="isEditing = false"
             />
           </div>
+          <!--
+            padMode：编辑时保留预览，实现即时渲染（含公式）
+            非 padMode：编辑时隐藏预览，只展示编辑器
+          -->
           <div
+            v-show="!isEditing || padMode"
             class="prose prose-blue dark:prose-invert markdown-preview"
             v-html="fullMarkdownParser(localContent)"
           ></div>
