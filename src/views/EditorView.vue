@@ -241,6 +241,7 @@ const clearAutoSave = (): void => {
 watch([shortPath], () => {
   clearAutoSave();
   setupAutoSave();
+  injectTreeContext();
 });
 
 watch(
@@ -355,8 +356,69 @@ const generateHTML = async (): Promise<void> => {
   }
 };
 
+// 注入树上下文供 AI Chat 使用
+function injectTreeContext() {
+  (window as any).__tree_context__ = {
+    fileName: shortPath.value,
+  };
+  (window as any).__insertAINode__ = (content: string) => {
+    if (!shortPath.value) {
+      showWarning("请先打开一个文件");
+      return;
+    }
+    // 查找或创建选中的枝干节点
+    const findBranchToInsert = (node: TreeNodeType): TreeNodeType => {
+      // 在当前根节点下的第一个枝干中添加
+      if (node.type === "branch" && node.children) {
+        const leafNode: TreeNodeType = {
+          id: generateId(),
+          type: "leaf",
+          title: `AI ${new Date().toLocaleTimeString()}`,
+          content: content,
+        };
+        return {
+          ...node,
+          children: [...node.children, leafNode],
+        };
+      }
+      if (node.children) {
+        for (let i = 0; i < node.children.length; i++) {
+          const result = findBranchToInsert(node.children[i]);
+          if (result !== node.children[i]) return result;
+        }
+      }
+      return node;
+    };
+    const newTree = findBranchToInsert(tree.value);
+    if (newTree !== tree.value) {
+      tree.value = newTree;
+    } else {
+      // 没有枝干节点，在根节点下添加
+      const branch: TreeNodeType = {
+        id: generateId(),
+        type: "branch",
+        title: "AI 生成",
+        children: [
+          {
+            id: generateId(),
+            type: "leaf",
+            title: `AI ${new Date().toLocaleTimeString()}`,
+            content: content,
+          },
+        ],
+      };
+      tree.value = {
+        ...tree.value,
+        children: [...(tree.value.children || []), branch],
+      };
+    }
+    showSuccess("AI 内容已插入到树中");
+  };
+}
+
 onMounted(async () => {
   setupAutoSave();
+  injectTreeContext();
 
   const config = await loadConfig();
   const useAI = config.useAI;

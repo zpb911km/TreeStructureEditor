@@ -1,8 +1,26 @@
 <script setup lang="ts">
-import { watch, provide, ref } from "vue";
+import { watch, provide, ref, computed, nextTick } from "vue";
+import { useRoute } from "vue-router";
 import NotificationSystem from "./components/NotificationSystem.vue";
 import { initializeTheme } from "./utils/theme";
 import { tree } from "./utils/tree";
+
+const route = useRoute();
+const isAIChat = computed(() => route.path === "/ai-chat");
+
+// 进入 AI Chat 页面时锁住滚动，离开时恢复
+watch(
+  () => route.path,
+  async (path) => {
+    if (path === "/ai-chat") {
+      await nextTick();
+      window.scrollTo(0, 0);
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+  },
+);
 
 // 内部剪贴板
 const clipboardText = ref("");
@@ -49,11 +67,24 @@ watch(
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col pb-20">
-    <main class="flex-grow pt-4 pb-20">
+  <div
+    :class="
+      isAIChat
+        ? 'h-screen overflow-hidden flex flex-col'
+        : 'min-h-screen flex flex-col pb-20'
+    "
+  >
+    <main
+      :class="
+        isAIChat
+          ? 'flex-1 flex flex-col overflow-hidden'
+          : 'flex-grow pt-4 pb-20'
+      "
+    >
       <router-view />
     </main>
     <footer
+      v-if="!isAIChat"
       class="mt-12 text-center text-slate-500 dark:text-slate-400 text-sm"
     >
       <p>TreeStructureEditor • Hierarchical Markdown Editor • by zpb911km</p>

@@ -206,7 +206,14 @@ function forceInlineSuggestRefresh() {
         text: "",
       },
     ],
-    () => [new monaco.Selection(pos.lineNumber, pos.column, pos.lineNumber, pos.column)],
+    () => [
+      new monaco.Selection(
+        pos.lineNumber,
+        pos.column,
+        pos.lineNumber,
+        pos.column,
+      ),
+    ],
   );
   isAIEdit = false;
 }
