@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, onMounted, onUnmounted, nextTick } from "vue";
+import { watch, onMounted, onUnmounted, nextTick, provide, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import TreeNode from "../components/TreeNode.vue";
 import { generateId } from "../utils/tree";
@@ -20,6 +20,16 @@ import {
   saveFile,
 } from "../apis";
 import { tree, shortPath } from "../utils/tree";
+
+// 全局拖拽状态（让深层 TreeNode 也能感知）
+const isDraggingGlobally = ref(false);
+provide("isDraggingGlobally", isDraggingGlobally);
+
+// 全局拖拽兜底：任何 dragend 事件都重置 isDraggingGlobally
+const resetGlobalDragState = () => {
+  isDraggingGlobally.value = false;
+  (window as any).__tree_drag_id = undefined;
+};
 
 const router = useRouter();
 const route = useRoute();
@@ -90,6 +100,86 @@ const addChildNode = (parentId: string, type: "branch" | "leaf"): void => {
   };
 
   tree.value = addNodeRecursively(tree.value);
+};
+
+/**
+ * 通用拖放移动：将 draggedId 节点移动到 targetId 节点的指定位置
+ * @param position 'before' | 'after' | 'child'
+ */
+const moveNodeTo = (
+  draggedId: string,
+  targetId: string,
+  position: "before" | "after" | "child",
+): void => {
+  if (draggedId === targetId) return;
+
+  // 深拷贝以避免 Vue 响应式追踪的混乱
+  const newTree = JSON.parse(JSON.stringify(tree.value));
+
+  // 构建 id → node / id → parent 映射
+  const nodeMap = new Map<string, TreeNodeType>();
+  const parentMap = new Map<string, TreeNodeType>();
+
+  const buildMaps = (node: TreeNodeType, parent?: TreeNodeType) => {
+    nodeMap.set(node.id, node);
+    if (parent) parentMap.set(node.id, parent);
+    if (node.children) {
+      node.children.forEach((child) => buildMaps(child, node));
+    }
+  };
+  buildMaps(newTree);
+
+  const draggedNode = nodeMap.get(draggedId);
+  const dragParent = parentMap.get(draggedId);
+  const targetNode = nodeMap.get(targetId);
+  const targetParent = parentMap.get(targetId);
+
+  if (!draggedNode || !dragParent || !targetNode || !targetParent) return;
+
+  // 防止把节点放入自己的后代中（循环引用检测）
+  let ancestor: TreeNodeType | undefined = targetParent;
+  while (ancestor) {
+    if (ancestor.id === draggedId) return;
+    ancestor = parentMap.get(ancestor.id);
+  }
+
+  // 只有 branch 才能作为 child 容器
+  if (position === "child" && targetNode.type !== "branch") return;
+
+  // 从原父节点移除
+  const dragIndex = dragParent.children!.findIndex(
+    (c: TreeNodeType) => c.id === draggedId,
+  );
+  if (dragIndex === -1) return;
+  dragParent.children!.splice(dragIndex, 1);
+
+  // 移除后重新查找 target 在父节点中的位置（索引可能已偏移）
+  const actualTargetParent = parentMap.get(targetId)!;
+  const actualTargetIndex = actualTargetParent.children!.findIndex(
+    (c: TreeNodeType) => c.id === targetId,
+  );
+  if (actualTargetIndex === -1) return;
+
+  // 插入到新位置
+  switch (position) {
+    case "before":
+      actualTargetParent.children!.splice(actualTargetIndex, 0, draggedNode);
+      break;
+    case "after":
+      actualTargetParent.children!.splice(
+        actualTargetIndex + 1,
+        0,
+        draggedNode,
+      );
+      break;
+    case "child":
+      targetNode.children = targetNode.children || [];
+      targetNode.children.push(draggedNode);
+      break;
+  }
+
+  tree.value = newTree;
+  nextTick(() => renderMath());
 };
 
 const moveNode = (id: string, direction: "up" | "down"): void => {
@@ -420,6 +510,9 @@ onMounted(async () => {
   setupAutoSave();
   injectTreeContext();
 
+  // 全局兜底：如果 dragend 丢失（浏览器失去焦点、DOM 突变等），确保重置
+  window.addEventListener("dragend", resetGlobalDragState);
+
   const config = await loadConfig();
   const useAI = config.useAI;
   if (useAI) {
@@ -450,6 +543,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   clearAutoSave();
+  window.removeEventListener("dragend", resetGlobalDragState);
 });
 </script>
 
@@ -505,6 +599,7 @@ onUnmounted(() => {
           @delete="deleteNode"
           @add-child="addChildNode"
           @move="moveNode"
+          @move-to="moveNodeTo"
         />
       </ul>
     </div>
