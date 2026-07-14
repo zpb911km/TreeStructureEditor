@@ -175,6 +175,33 @@ function scrollToBottom() {
   });
 }
 
+/** 从消息中提取纯文本预览（去除图片部分） */
+function getMessagePreview(msg: ChatMessage): string {
+  if (typeof msg.content === "string") return msg.content;
+  if (Array.isArray(msg.content)) {
+    const textParts = msg.content
+      .filter((p) => p.type === "text")
+      .map((p) => p.text)
+      .filter(Boolean);
+    const hasImg = msg.content.some((p) => p.type === "image_url");
+    let preview = textParts.length > 0 ? textParts.join(" ") : "";
+    if (hasImg) {
+      const imgCount = msg.content.filter((p) => p.type === "image_url").length;
+      preview = (preview ? preview + " " : "") + `[${imgCount}张图片]`;
+    }
+    return preview;
+  }
+  return "";
+}
+
+/** 获取消息中所有图片 URL */
+function getImageUrls(msg: ChatMessage): string[] {
+  if (!Array.isArray(msg.content)) return [];
+  return msg.content
+    .filter((p) => p.type === "image_url" && p.image_url?.url)
+    .map((p) => p.image_url!.url);
+}
+
 /** 确保 API URL 指向正确的 /chat/completions 端点 */
 function buildChatUrl(url: string): string {
   const trimmed = url.replace(/\/+$/, "");
@@ -314,6 +341,14 @@ async function sendMessage() {
       parts.length === 1 && parts[0].type === "text"
         ? parts[0].text || ""
         : (parts as any);
+  }
+
+  // 自动生成标题：取第一条用户消息的前 30 个字符
+  if (conv.messages.filter((m) => m.role === "user").length === 1) {
+    const preview = getMessagePreview(userMsg);
+    if (preview) {
+      conv.title = preview.length > 30 ? preview.slice(0, 30) + "…" : preview;
+    }
   }
 
   messageInput.value = "";
@@ -1010,7 +1045,7 @@ onMounted(() => {
           <div
             v-for="conv in conversations"
             :key="conv.id"
-            class="group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-sm"
+            class="group flex items-start gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-sm"
             :class="
               conv.id === currentConvId
                 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
@@ -1018,10 +1053,28 @@ onMounted(() => {
             "
             @click="switchConversation(conv.id)"
           >
-            <span class="text-base flex-shrink-0">💬</span>
-            <span class="flex-1 truncate">{{ conv.title || "新对话" }}</span>
+            <span class="text-base flex-shrink-0 mt-0.5">💬</span>
+            <div class="flex-1 min-w-0">
+              <div class="truncate font-medium">{{ conv.title || "新对话" }}</div>
+              <div
+                v-if="conv.messages.length > 0"
+                class="flex flex-wrap items-center gap-1 mt-1"
+              >
+                <template v-for="imgUrl in getImageUrls(conv.messages[conv.messages.length - 1]).slice(0, 3)" :key="imgUrl">
+                  <img
+                    :src="imgUrl"
+                    class="w-6 h-6 rounded object-cover border border-gray-300 dark:border-slate-600 flex-shrink-0 cursor-pointer"
+                    @click.stop="openLightbox(imgUrl)"
+                    alt="缩略图"
+                  />
+                </template>
+                <span class="text-xs text-gray-400 dark:text-slate-500 truncate flex-1">
+                  {{ getMessagePreview(conv.messages[conv.messages.length - 1]).slice(0, 50) }}
+                </span>
+              </div>
+            </div>
             <div
-              class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
             >
               <button
                 class="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
@@ -1155,7 +1208,11 @@ onMounted(() => {
             </p>
           </div>
 
-          <div v-else class="mx-auto space-y-6" style="max-width: min(900px, 100%);">
+          <div
+            v-else
+            class="mx-auto space-y-6"
+            style="max-width: min(900px, 100%)"
+          >
             <div
               v-for="(msg, idx) in currentConv.messages"
               :key="msg.id || idx"
@@ -1172,11 +1229,21 @@ onMounted(() => {
                   <div
                     class="px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 text-emerald-900 dark:text-emerald-100 text-sm leading-relaxed whitespace-pre-wrap break-words"
                   >
-                    {{
-                      typeof msg.content === "string"
-                        ? msg.content
-                        : "[复杂消息]"
-                    }}
+                    <template v-if="typeof msg.content === 'string'">
+                      {{ msg.content }}
+                    </template>
+                    <template v-else-if="Array.isArray(msg.content)">
+                      <template v-for="(part, pi) in msg.content" :key="pi">
+                        <img
+                          v-if="part.type === 'image_url'"
+                          :src="part.image_url?.url"
+                          class="msg-img inline-block max-w-[160px] max-h-[160px] rounded-lg border border-emerald-300 dark:border-emerald-600 cursor-pointer my-1 object-cover"
+                          @click.stop="openLightbox(part.image_url?.url || '')"
+                          alt="用户上传图片"
+                        />
+                        <span v-else-if="part.type === 'text'">{{ part.text }}</span>
+                      </template>
+                    </template>
                   </div>
                 </div>
               </div>
@@ -1286,7 +1353,7 @@ onMounted(() => {
         <div
           class="flex-shrink-0 px-4 py-3 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50"
         >
-          <div style="max-width: min(900px, 100%);" class="mx-auto">
+          <div style="max-width: min(900px, 100%)" class="mx-auto">
             <!-- Uploaded files preview -->
             <div
               v-if="uploadedFiles.length > 0"

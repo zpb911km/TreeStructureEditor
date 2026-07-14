@@ -111,8 +111,8 @@ const getDropPositionFromCursor = (e: DragEvent): DropPosition => {
 };
 
 // 拖拽自动滚动参数
-const SCROLL_THRESHOLD = 50;  // 距离边界 px
-const SCROLL_STEP = 15;       // 每帧滚动 px
+const SCROLL_THRESHOLD = 50; // 距离边界 px
+const SCROLL_STEP = 15; // 每帧滚动 px
 
 const autoScroll = (e: DragEvent) => {
   const scrollEl = document.scrollingElement || document.documentElement;
@@ -320,7 +320,9 @@ const canMoveDown = computed(
         ]"
       ></div>
       <!-- 浮动在右上角的按钮容器 -->
-      <div class="absolute top-2 right-2 flex flex-wrap gap-1 z-10 max-w-[95%] justify-end">
+      <div
+        class="absolute top-2 right-2 flex flex-wrap gap-1 z-10 max-w-[95%] justify-end"
+      >
         <!-- ══════ 移动端 ══════ -->
         <template v-if="isMobile">
           <div class="relative">
