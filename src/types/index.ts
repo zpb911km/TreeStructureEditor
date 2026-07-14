@@ -1,11 +1,9 @@
-export type NodeType = "branch" | "leaf";
-
 export interface TreeNode {
   id: string;
-  type: NodeType;
   title: string;
-  content?: string;
-  children?: TreeNode[];
+  content: string;
+  children: TreeNode[];
+  collapsed?: boolean;
 }
 
 export interface Notification {
