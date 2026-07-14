@@ -34,7 +34,6 @@ const emit = defineEmits<Emits>();
 const padMode = ref(false);
 const isEditing = ref(false);
 const localContent = ref(props.node.content || "");
-const expanded = ref(true);
 const isMobile = ref(false);
 const showDropdown = ref(false);
 const nodeRef = ref<HTMLElement | null>(null);
@@ -63,7 +62,7 @@ onMounted(async () => {
   padMode.value = config.padMode ? config.padMode : false;
 
   // 初始渲染数学公式
-  if (props.node.type === "leaf" && !isEditing.value) {
+  if (!isEditing.value) {
     nextTick(() => {
       renderMath();
     });
@@ -102,12 +101,10 @@ const getDropPositionFromCursor = (e: DragEvent): DropPosition => {
   const h = rect.height;
   const ratio = y / h;
 
-  // 上 30% → before，中间 40% → child（仅 branch），下 30% → after
+  // 上 30% → before，中间 40% → child（任何节点都可作为容器），下 30% → after
   if (ratio < 0.3) return "before";
   if (ratio > 0.7) return "after";
-  if (props.node.type === "branch") return "child";
-  // leaf 节点不支持作为 child 容器，fallback 到 sibling 插入
-  return ratio < 0.5 ? "before" : "after";
+  return "child";
 };
 
 // 拖拽自动滚动参数
@@ -241,16 +238,12 @@ const handleTitleChange = (e: Event) => {
   const target = e.target as HTMLInputElement;
   emit("update", props.node.id, { title: target.value });
 };
-const handleAddBranch = () => {
+const handleEdit = () => {
+  isEditing.value = true;
+  showDropdown.value = false;
+};
+const handleAddChild = () => {
   emit("addChild", props.node.id, "branch");
-  showDropdown.value = false;
-};
-const handleAddLeaf = () => {
-  emit("addChild", props.node.id, "leaf");
-  showDropdown.value = false;
-};
-const handleMove = (direction: "up" | "down") => {
-  emit("move", props.node.id, direction);
   showDropdown.value = false;
 };
 const handleDelete = () => {
@@ -258,38 +251,25 @@ const handleDelete = () => {
   showDropdown.value = false;
 };
 const handleNodeClick = (e: MouseEvent) => {
-  // 如果点击的是拖拽手柄或其子元素，不进入编辑模式
   const target = e.target as HTMLElement;
+  // 排除拖拽手柄、输入框、按钮等交互元素
   if (target.closest('[draggable="true"]')) return;
-  if (props.node.type === "leaf") {
-    isEditing.value = true;
-  }
-  // 枝干节点不进入编辑模式
+  if (target.closest("input, button, textarea, select")) return;
+  isEditing.value = true;
 };
-const canMoveUp = computed(() => props.nodeIndex > 0);
-const canMoveDown = computed(
-  () =>
-    props.parentChildren && props.nodeIndex < props.parentChildren.length - 1,
-);
 </script>
 <template>
-  <li
-    class="relative mb-1 pl-1"
-    :class="{ 'cursor-pointer': node.type === 'branch' }"
-  >
+  <li class="relative mb-1 pl-1">
     <div
       ref="nodeRef"
-      class="p-2 rounded-lg relative transition-all duration-150"
+      class="p-1 rounded-lg relative transition-all duration-150 bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
       :class="[
-        node.type === 'branch'
-          ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50'
-          : 'bg-emerald-50 dark:bg-emerald-900/30 border-2 border-emerald-200 dark:border-emerald-700',
         isDragOver && !isInvalidTarget
           ? 'ring-2 ring-indigo-400 dark:ring-indigo-500'
           : '',
         isInvalidTarget ? 'ring-2 ring-red-400 dark:ring-red-500' : '',
         dropPosition === 'child'
-          ? 'ring-4 ring-emerald-400 dark:ring-emerald-500 scale-[1.02]'
+          ? 'ring-4 ring-indigo-400 dark:ring-indigo-500 scale-[1.02]'
           : '',
         isDragging ? 'opacity-50' : '',
       ]"
@@ -332,51 +312,33 @@ const canMoveDown = computed(
             </button>
             <div
               v-if="showDropdown"
-              class="dropdown-content absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg dark:text-white z-20"
+              class="dropdown-content absolute right-0 mt-1 w-28 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg dark:text-white z-20"
             >
               <div class="py-1">
                 <button
-                  v-if="canMoveUp"
                   class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-                  @click="handleMove('up')"
+                  @click="handleEdit"
                 >
-                  ↑ 上移
-                </button>
-                <button
-                  v-if="canMoveDown"
-                  class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-                  @click="handleMove('down')"
-                >
-                  ↓ 下移
+                  ✏️ Edit
                 </button>
               </div>
               <div class="border-t border-gray-200 dark:border-gray-700 my-1" />
-              <div v-if="node.type === 'branch'" class="py-1">
+              <div class="py-1">
                 <button
                   class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-                  @click="handleAddBranch"
+                  @click="handleAddChild"
                 >
-                  + Branch
-                </button>
-                <button
-                  class="w-full text-left px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-                  @click="handleAddLeaf"
-                >
-                  + Leaf
+                  + Child
                 </button>
               </div>
-              <div
-                v-if="node.type === 'leaf'"
-                class="border-t border-gray-200 dark:border-gray-700 my-1"
-              >
-                <div class="py-1">
-                  <button
-                    class="w-full text-left px-3 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                    @click="handleDelete"
-                  >
-                    Delete
-                  </button>
-                </div>
+              <div class="border-t border-gray-200 dark:border-gray-700 my-1" />
+              <div class="py-1">
+                <button
+                  class="w-full text-left px-3 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                  @click="handleDelete"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>
@@ -397,42 +359,24 @@ const canMoveDown = computed(
         <template v-else>
           <div class="flex space-x-1">
             <button
-              :disabled="!canMoveUp"
-              :hidden="!canMoveUp"
-              class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
-              @click.stop="handleMove('up')"
+              class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/70"
+              @click.stop="handleEdit"
             >
-              ↑
+              Edit
             </button>
             <button
-              :disabled="!canMoveDown"
-              :hidden="!canMoveDown"
-              class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
-              @click.stop="handleMove('down')"
+              class="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/70"
+              @click.stop="handleAddChild"
             >
-              ↓
+              + Child
+            </button>
+            <button
+              class="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-900/70"
+              @click.stop="handleDelete"
+            >
+              Delete
             </button>
           </div>
-          <div v-if="node.type === 'branch'" class="flex space-x-1">
-            <button
-              class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/70"
-              @click.stop="handleAddBranch"
-            >
-              + Branch
-            </button>
-            <button
-              class="px-2 py-1 text-xs bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-200 dark:hover:bg-emerald-900/70"
-              @click.stop="handleAddLeaf"
-            >
-              + Leaf
-            </button>
-          </div>
-          <button
-            class="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-900/70"
-            @click.stop="handleDelete"
-          >
-            Delete
-          </button>
           <!-- 桌面端拖拽手柄 -->
           <div
             v-if="canDrag"
@@ -448,33 +392,30 @@ const canMoveDown = computed(
       </div>
       <!-- 内容区域 -->
       <div class="w-full">
-        <div v-if="node.type === 'branch'" class="flex items-center">
+        <div class="flex items-center">
           <button
-            class="mr-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 focus:outline-none"
-            @click.stop="expanded = !expanded"
+            v-if="node.content || node.children.length > 0"
+            class="mr-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 focus:outline-none"
+            @click.stop="emit('update', node.id, { collapsed: !node.collapsed })"
           >
-            {{ expanded ? "▼" : "▶" }}
+            {{ node.collapsed ? "▶" : "▼" }}
           </button>
           <input
             type="text"
             :value="node.title"
-            class="font-bold text-base md:text-lg bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-600 text-gray-900 dark:text-white min-w-0 w-full"
-            placeholder="Branch title"
+            class="font-bold text-base md:text-lg bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-indigo-300 dark:focus:ring-indigo-600 text-gray-900 dark:text-white min-w-0 w-full"
+            placeholder="Node title"
             @change="handleTitleChange"
           />
         </div>
-        <div v-else>
+        <template v-if="!node.collapsed">
           <div v-if="isEditing">
             <FloatEditor
               v-if="padMode"
               v-model="localContent"
               @blur="isEditing = false"
             />
-            <RichEditor
-              v-else
-              v-model="localContent"
-              @blur="isEditing = false"
-            />
+            <RichEditor v-else v-model="localContent" @blur="isEditing = false" />
           </div>
           <!--
             padMode：编辑时保留预览，实现即时渲染（含公式）
@@ -482,13 +423,14 @@ const canMoveDown = computed(
           -->
           <div
             v-show="!isEditing || padMode"
-            class="prose prose-blue dark:prose-invert markdown-preview"
+            class="prose prose-blue dark:prose-invert markdown-preview cursor-text"
             v-html="fullMarkdownParser(localContent)"
           ></div>
-        </div>
+        </template>
         <ul
-          v-if="expanded && node.children && node.children.length > 0"
-          class="ml-2 pl-0 border-dashed border-blue-200 dark:border-blue-700"
+          v-if="!node.collapsed && node.children.length > 0"
+          class="ml-0 pl-0 border-l-2 border-solid border-indigo-200 dark:border-indigo-700"
+          @click.stop
         >
           <TreeNode
             v-for="(child, index) in node.children"
@@ -508,9 +450,9 @@ const canMoveDown = computed(
           />
         </ul>
 
-        <!-- 统一的拖拽落点区：空 branch / 折叠态 / 子列表末尾都能兜底 -->
+        <!-- 统一的拖拽落点区：空节点 / 折叠态 / 子列表末尾都能兜底 -->
         <div
-          v-if="node.type === 'branch' && isDraggingGlobally"
+          v-if="!node.collapsed && isDraggingGlobally"
           class="my-1 border-2 border-dashed border-indigo-300 dark:border-indigo-500/60 rounded-lg flex items-center justify-center text-xs text-indigo-400 dark:text-indigo-400 cursor-pointer select-none transition-all duration-200"
           :class="
             isDropZoneHovered

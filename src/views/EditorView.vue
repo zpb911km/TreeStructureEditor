@@ -72,28 +72,32 @@ const deleteNode = (id: string): void => {
   tree.value = deleteNodeRecursively(tree.value);
 };
 
-const addChildNode = (parentId: string, type: "branch" | "leaf"): void => {
+const addChildNode = (parentId: string, _type?: string): void => {
+  // 统一创建空节点：title 和 content 都为空，用户按需填写
   const newNode: TreeNodeType = {
     id: generateId(),
-    type,
-    title: type === "branch" ? "New Branch" : `Leaf ${Date.now()}`,
-    content: type === "leaf" ? "# New Leaf" : "",
-    children: type === "branch" ? [] : undefined,
+    title: "",
+    content: "",
+    children: [],
+    collapsed: false,
   };
 
   const addNodeRecursively = (node: TreeNodeType): TreeNodeType => {
     if (node.id === parentId) {
       return {
         ...node,
-        children: [...(node.children || []), newNode],
+        children: [...node.children, newNode],
       };
     }
 
-    if (node.children) {
-      return {
-        ...node,
-        children: node.children.map(addNodeRecursively),
-      };
+    for (let i = 0; i < node.children.length; i++) {
+      const result = addNodeRecursively(node.children[i]);
+      if (result !== node.children[i]) {
+        return {
+          ...node,
+          children: node.children.map((c, idx) => (idx === i ? result : c)),
+        };
+      }
     }
 
     return node;
@@ -143,9 +147,7 @@ const moveNodeTo = (
     ancestor = parentMap.get(ancestor.id);
   }
 
-  // 只有 branch 才能作为 child 容器
-  if (position === "child" && targetNode.type !== "branch") return;
-
+  // 任何节点都可以作为 child 容器（模糊 branch/leaf 边界）
   // 从原父节点移除
   const dragIndex = dragParent.children!.findIndex(
     (c: TreeNodeType) => c.id === draggedId,
@@ -279,15 +281,26 @@ const loadFileByPath = async (filePath: string): Promise<void> => {
     const root: TreeNodeType = {
       id: generateId(),
       title: "Root",
-      type: "branch",
+      content: "",
       children: [],
+      collapsed: false,
     };
     content = JSON.stringify(root);
     showWarning("This file is empty. Initializing with a new tree structure.");
   }
   try {
-    const parsedTree = JSON.parse(content) as TreeNodeType;
-    tree.value = parsedTree;
+    const parsedTree = JSON.parse(content);
+
+    // 旧数据迁移：移除 type 字段，补全 content/children
+    const migrateNode = (node: any): TreeNodeType => ({
+      id: node.id,
+      title: node.title ?? "",
+      content: node.content ?? "",
+      children: node.children ? node.children.map(migrateNode) : [],
+      collapsed: node.collapsed ?? false,
+    });
+
+    tree.value = migrateNode(parsedTree);
   } catch (error) {
     console.error("Error parsing JSON:", error);
     showError("Failed to parse document: " + error);
@@ -359,26 +372,20 @@ const generateHTML = async (): Promise<void> => {
       let html = "";
       const marginLeft = 10;
 
-      if (node.type === "branch") {
-        html += `<div style="margin-left: ${marginLeft}px; border-left: 3px double #000;">`;
-        html += `<div style="margin-left: ${marginLeft}px; margin-bottom: 10px; font-weight: bold; font-size: 1.2em;">`;
-        html += `${node.title}`;
-        html += "</div>";
+      html += `<div style="margin-left: ${marginLeft}px; border-left: 2px solid #000; padding-left: 10px; margin-bottom: 8px;">`;
+      html += `<div style="font-weight: bold; font-size: 1.2em; margin-bottom: 4px;">${node.title}</div>`;
 
-        if (node.children && node.children.length > 0) {
-          html += `<div style="margin-left: ${marginLeft}px;">`;
-          node.children.forEach((child) => {
-            html += generateTreeHTML(child, level + 1);
-          });
-          html += "</div>";
-        }
-        html += "</div>";
-      } else {
-        html += `<div style="margin-left: ${marginLeft}px; margin-bottom: 10px; padding-left: 10px; border-left: 1px solid #000;">`;
-        const parsedContent = exportMarkdownParser(node.content || "");
-        html += parsedContent;
-        html += "</div>";
+      if (node.content) {
+        html += `<div style="margin-left: 10px; margin-bottom: 8px;">${exportMarkdownParser(node.content)}</div>`;
       }
+
+      if (node.children.length > 0) {
+        node.children.forEach((child) => {
+          html += generateTreeHTML(child, level + 1);
+        });
+      }
+
+      html += "</div>";
 
       return html;
     };
@@ -456,50 +463,50 @@ function injectTreeContext() {
       showWarning("请先打开一个文件");
       return;
     }
-    // 查找或创建选中的枝干节点
-    const findBranchToInsert = (node: TreeNodeType): TreeNodeType => {
-      // 在当前根节点下的第一个枝干中添加
-      if (node.type === "branch" && node.children) {
+    // 查找第一个有子节点的节点作为插入目标
+    const findTargetToInsert = (node: TreeNodeType): TreeNodeType => {
+      if (node.children.length > 0) {
         const leafNode: TreeNodeType = {
           id: generateId(),
-          type: "leaf",
           title: `AI ${new Date().toLocaleTimeString()}`,
           content: content,
+          children: [],
+          collapsed: false,
         };
         return {
           ...node,
           children: [...node.children, leafNode],
         };
       }
-      if (node.children) {
-        for (let i = 0; i < node.children.length; i++) {
-          const result = findBranchToInsert(node.children[i]);
-          if (result !== node.children[i]) return result;
-        }
+      for (let i = 0; i < node.children.length; i++) {
+        const result = findTargetToInsert(node.children[i]);
+        if (result !== node.children[i]) return result;
       }
       return node;
     };
-    const newTree = findBranchToInsert(tree.value);
+    const newTree = findTargetToInsert(tree.value);
     if (newTree !== tree.value) {
       tree.value = newTree;
     } else {
-      // 没有枝干节点，在根节点下添加
-      const branch: TreeNodeType = {
+      // 无处可插，在根节点下添加
+      const newNode: TreeNodeType = {
         id: generateId(),
-        type: "branch",
         title: "AI 生成",
+        content: "",
         children: [
           {
             id: generateId(),
-            type: "leaf",
             title: `AI ${new Date().toLocaleTimeString()}`,
             content: content,
+            children: [],
+            collapsed: false,
           },
         ],
+        collapsed: false,
       };
       tree.value = {
         ...tree.value,
-        children: [...(tree.value.children || []), branch],
+        children: [...tree.value.children, newNode],
       };
     }
     showSuccess("AI 内容已插入到树中");
