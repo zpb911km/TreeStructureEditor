@@ -19,15 +19,6 @@ interface ChatCompletionRequest {
   stream?: boolean;
 }
 
-interface FIMCompletionRequest {
-  model: string;
-  prompt: string;
-  suffix: string;
-  temperature?: number;
-  max_tokens?: number;
-  stream?: boolean;
-}
-
 interface CompletionResponse {
   choices: Array<{
     message: { role: string; content: string };
@@ -153,12 +144,9 @@ class AISuggestionService {
 
     try {
       const ctx = this.buildFIMContext(content, position);
-      const useFIM = this.config.fimEnabled && ctx.suffix.trim().length > 0;
 
       const url = `${this.config.baseURL}/chat/completions`;
-      const body = useFIM
-        ? this.buildFIMBody(ctx.fimPrompt, ctx.suffix)
-        : this.buildChatBody(ctx.chatPrompt, true);
+      const body = this.buildChatBody(ctx.chatPrompt, true);
 
       const response = await tauriFetch(url, {
         method: "POST",
@@ -182,8 +170,8 @@ class AISuggestionService {
       for await (const token of parseSSEStream(response, abortSignal)) {
         accumulated += token.content;
 
-        // 清理：去掉前面重复的 ctx.beforeCursor
-        const cleaned = this.dedupePrefix(accumulated, ctx.beforeCursor);
+        // 流式阶段：仅清理明显的前置重复，避免幽灵文本闪烁
+        const cleaned = this.dedupeContext(accumulated, ctx.beforeCursor, '');
         onToken(cleaned);
 
         if (token.finishReason) {
@@ -191,8 +179,8 @@ class AISuggestionService {
         }
       }
 
-      // 最终清理后返回
-      const final = this.dedupePrefix(accumulated, ctx.beforeCursor);
+      // 流结束：执行完整去重（前后文一起检查）
+      const final = this.dedupeContext(accumulated, ctx.beforeCursor, ctx.suffix);
       return final || null;
     } catch (error) {
       if ((error as Error)?.name === "AbortError") {
@@ -212,12 +200,9 @@ class AISuggestionService {
     abortSignal?: AbortSignal,
   ): Promise<string | null> {
     const ctx = this.buildFIMContext(content, position);
-    const useFIM = this.config.fimEnabled && ctx.suffix.trim().length > 0;
 
     const url = `${this.config.baseURL}/chat/completions`;
-    const body = useFIM
-      ? this.buildFIMBody(ctx.fimPrompt, ctx.suffix)
-      : this.buildChatBody(ctx.chatPrompt, false);
+    const body = this.buildChatBody(ctx.chatPrompt, false);
 
     const response = await tauriFetch(url, {
       method: "POST",
@@ -241,7 +226,7 @@ class AISuggestionService {
 
     if (data.choices?.[0]?.message?.content) {
       let cleaned = data.choices[0].message.content.trim();
-      cleaned = this.dedupePrefix(cleaned, ctx.beforeCursor);
+      cleaned = this.dedupeContext(cleaned, ctx.beforeCursor, ctx.suffix);
       return cleaned;
     }
     return null;
@@ -268,18 +253,6 @@ class AISuggestionService {
     };
   }
 
-  private buildFIMBody(prompt: string, suffix: string): FIMCompletionRequest {
-    return {
-      model: this.config.model,
-      prompt,
-      suffix,
-      temperature: this.config.temperature,
-      max_tokens: this.config.maxTokens,
-    };
-  }
-
-  // ── 上下文构建 ────────────────────────────────────────────
-
   private buildFIMContext(
     content: string,
     position: { lineNumber: number; column: number },
@@ -298,34 +271,71 @@ class AISuggestionService {
     const shortBefore = beforeCursor.slice(-800);
     const shortAfter = afterCursor.slice(0, 800);
 
-    // Chat 场景：组装成带标记的提示词
-    const chatPrompt = `${shortBefore}<光标位置>${shortAfter}\n\n请在光标位置进行补全:`;
+    const isAtEnd = shortAfter.trim().length === 0;
 
-    // FIM 场景：直接返回纯前后文
+    let chatPrompt: string;
+    if (isAtEnd) {
+      // ── 文末续写：简单直接 ──
+      chatPrompt = `以下文本需要续写。从结尾处继续，只输出续写内容：
+
+${shortBefore}
+---
+`;
+    } else {
+      // ── 中间插入：明确告知不要重复前后文 ──
+      chatPrompt = `在"<INSERT>"位置插入内容，使前后连贯。
+
+--- 前面的内容 ---
+${shortBefore}
+<INSERT>
+${shortAfter}
+--- 后面的内容 ---
+
+规则：
+1. 只输出在 <INSERT> 位置应该插入的新内容
+2. 不要重复"前面的内容"或"后面的内容"中的任何文字
+3. 插入后整体应读起来自然连贯
+`;
+    }
+
     return {
       chatPrompt,
       fimPrompt: shortBefore,
       suffix: shortAfter,
       beforeCursor,
+      isAtEnd,
     };
   }
 
   // ── 工具 ──────────────────────────────────────────────────
 
-  /** 去掉 AI 输出中重复的 beforeCursor 前缀 */
-  private dedupePrefix(text: string, beforeCursor: string): string {
-    if (!beforeCursor || !text) return text;
-    const trimmed = beforeCursor.trim();
-    if (!trimmed) return text;
+  /** 去除 AI 输出中可能重复的上下文（前置去重 + 后置去重） */
+  private dedupeContext(text: string, beforeCursor: string, afterCursor: string): string {
+    if (!text) return text;
+    let result = text;
 
-    if (text.startsWith(trimmed)) {
-      return text.slice(trimmed.length);
+    // ── 前置去重：AI 有时复述 beforeCursor 结尾来衔接 ──
+    // 滑动窗口匹配 result 开头与 beforeCursor 末尾的最长公共子串
+    const beforeNorm = beforeCursor.replace(/\s+$/, '');
+    let bestLen = 0;
+    for (let i = 1; i <= Math.min(beforeNorm.length, result.length); i++) {
+      const suffix = beforeNorm.slice(-i);
+      if (result.startsWith(suffix)) bestLen = i;
     }
-    // 有时 AI 会包含末尾的换行符等
-    if (text.startsWith(beforeCursor)) {
-      return text.slice(beforeCursor.length);
+    if (bestLen > 10) result = result.slice(bestLen);
+
+    // ── 后置去重：AI 有时在末尾重复 afterCursor 开头 ──
+    if (afterCursor) {
+      const afterNorm = afterCursor.replace(/^\s+/, '');
+      bestLen = 0;
+      for (let i = 1; i <= Math.min(afterNorm.length, result.length); i++) {
+        const prefix = afterNorm.slice(0, i);
+        if (result.endsWith(prefix)) bestLen = i;
+      }
+      if (bestLen > 10) result = result.slice(0, -bestLen);
     }
-    return text;
+
+    return result;
   }
 
   // ── 配置更新 ──────────────────────────────────────────────
