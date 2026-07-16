@@ -171,7 +171,7 @@ class AISuggestionService {
         accumulated += token.content;
 
         // 流式阶段：仅清理明显的前置重复，避免幽灵文本闪烁
-        const cleaned = this.dedupeContext(accumulated, ctx.beforeCursor, '');
+        const cleaned = this.dedupeContext(accumulated, ctx.beforeCursor, "");
         onToken(cleaned);
 
         if (token.finishReason) {
@@ -180,7 +180,11 @@ class AISuggestionService {
       }
 
       // 流结束：执行完整去重（前后文一起检查）
-      const final = this.dedupeContext(accumulated, ctx.beforeCursor, ctx.suffix);
+      const final = this.dedupeContext(
+        accumulated,
+        ctx.beforeCursor,
+        ctx.suffix,
+      );
       return final || null;
     } catch (error) {
       if ((error as Error)?.name === "AbortError") {
@@ -310,13 +314,17 @@ ${shortAfter}
   // ── 工具 ──────────────────────────────────────────────────
 
   /** 去除 AI 输出中可能重复的上下文（前置去重 + 后置去重） */
-  private dedupeContext(text: string, beforeCursor: string, afterCursor: string): string {
+  private dedupeContext(
+    text: string,
+    beforeCursor: string,
+    afterCursor: string,
+  ): string {
     if (!text) return text;
     let result = text;
 
     // ── 前置去重：AI 有时复述 beforeCursor 结尾来衔接 ──
     // 滑动窗口匹配 result 开头与 beforeCursor 末尾的最长公共子串
-    const beforeNorm = beforeCursor.replace(/\s+$/, '');
+    const beforeNorm = beforeCursor.replace(/\s+$/, "");
     let bestLen = 0;
     for (let i = 1; i <= Math.min(beforeNorm.length, result.length); i++) {
       const suffix = beforeNorm.slice(-i);
@@ -326,7 +334,7 @@ ${shortAfter}
 
     // ── 后置去重：AI 有时在末尾重复 afterCursor 开头 ──
     if (afterCursor) {
-      const afterNorm = afterCursor.replace(/^\s+/, '');
+      const afterNorm = afterCursor.replace(/^\s+/, "");
       bestLen = 0;
       for (let i = 1; i <= Math.min(afterNorm.length, result.length); i++) {
         const prefix = afterNorm.slice(0, i);

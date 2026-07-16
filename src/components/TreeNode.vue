@@ -474,7 +474,9 @@ const handleNodeClick = (e: MouseEvent) => {
         <div
           v-if="!node.collapsed && isDraggingGlobally"
           class="flex items-center justify-center h-[3px] m-1 cursor-pointer select-none rounded transition-colors duration-100 mb-1"
-          :class="isDropZoneHovered ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''"
+          :class="
+            isDropZoneHovered ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''
+          "
           @dragover.prevent="handleDropZoneDragOver"
           @dragleave="handleDropZoneDragLeave"
           @drop.stop="handleDropZoneDrop"
