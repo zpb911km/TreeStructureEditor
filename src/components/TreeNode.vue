@@ -89,6 +89,16 @@ watch([localContent, isEditing], () => {
   }
 });
 
+// 全局拖拽结束时，清理目标节点上残留的拖放状态
+watch(isDraggingGlobally, (val) => {
+  if (!val) {
+    isDragOver.value = false;
+    dropPosition.value = null;
+    isInvalidTarget.value = false;
+    isDropZoneHovered.value = false;
+  }
+});
+
 // ═══════════════════════════════════════════
 // 拖放事件处理
 // ═══════════════════════════════════════════
@@ -152,6 +162,7 @@ const handleDragStart = (e: DragEvent) => {
 
 const handleDragOver = (e: DragEvent) => {
   e.preventDefault();
+  e.stopPropagation();
   if (!e.dataTransfer) return;
   e.dataTransfer.dropEffect = "move";
 
@@ -185,6 +196,7 @@ const handleDragLeave = () => {
 
 const handleDrop = (e: DragEvent) => {
   e.preventDefault();
+  e.stopPropagation();
   isDragOver.value = false;
   isInvalidTarget.value = false;
 
@@ -269,7 +281,7 @@ const handleNodeClick = (e: MouseEvent) => {
           : '',
         isInvalidTarget ? 'ring-2 ring-red-400 dark:ring-red-500' : '',
         dropPosition === 'child'
-          ? 'ring-4 ring-indigo-400 dark:ring-indigo-500 scale-[1.02]'
+          ? 'ring-4 ring-indigo-400 dark:ring-indigo-500'
           : '',
         isDragging ? 'opacity-50' : '',
       ]"
@@ -286,7 +298,7 @@ const handleNodeClick = (e: MouseEvent) => {
           dropPosition === 'before'
             ? 'top-0 bg-indigo-500 dark:bg-indigo-400 shadow-lg shadow-indigo-500/50'
             : 'top-0 bg-transparent',
-          isDragOver && dropPosition === 'before' ? 'scale-y-150' : '',
+          '',
         ]"
       ></div>
       <!-- after 指示器（底部插入线） -->
@@ -296,7 +308,7 @@ const handleNodeClick = (e: MouseEvent) => {
           dropPosition === 'after'
             ? 'bottom-0 bg-indigo-500 dark:bg-indigo-400 shadow-lg shadow-indigo-500/50'
             : 'bottom-0 bg-transparent',
-          isDragOver && dropPosition === 'after' ? 'scale-y-150' : '',
+          '',
         ]"
       ></div>
       <!-- 浮动在右上角的按钮容器 -->
@@ -458,22 +470,23 @@ const handleNodeClick = (e: MouseEvent) => {
           />
         </ul>
 
-        <!-- 统一的拖拽落点区：空节点 / 折叠态 / 子列表末尾都能兜底 -->
+        <!-- child 落点指示器（细线样式，与底部 after 指示器保持间距） -->
         <div
           v-if="!node.collapsed && isDraggingGlobally"
-          class="my-1 border-2 border-dashed border-indigo-300 dark:border-indigo-500/60 rounded-lg flex items-center justify-center text-xs text-indigo-400 dark:text-indigo-400 cursor-pointer select-none transition-all duration-200"
-          :class="
-            isDropZoneHovered
-              ? 'h-11 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 dark:border-indigo-400 scale-[1.02] text-indigo-600 dark:text-indigo-300'
-              : 'h-8 opacity-50 hover:opacity-90'
-          "
+          class="flex items-center justify-center h-[3px] m-1 cursor-pointer select-none rounded transition-colors duration-100 mb-1"
+          :class="isDropZoneHovered ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''"
           @dragover.prevent="handleDropZoneDragOver"
           @dragleave="handleDropZoneDragLeave"
           @drop.stop="handleDropZoneDrop"
         >
-          <span class="pointer-events-none">
-            {{ isDropZoneHovered ? "📥 放入 " + node.title : "📥 放入" }}
-          </span>
+          <div
+            class="w-full rounded-full pointer-events-none transition-all duration-100"
+            :class="
+              isDropZoneHovered
+                ? 'h-[3px] bg-indigo-500 dark:bg-indigo-400 shadow-lg shadow-indigo-500/50'
+                : 'h-[2px] bg-indigo-300 dark:bg-indigo-500/40'
+            "
+          ></div>
         </div>
       </div>
     </div>
