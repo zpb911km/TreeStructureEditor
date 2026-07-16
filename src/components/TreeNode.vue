@@ -398,7 +398,9 @@ const handleNodeClick = (e: MouseEvent) => {
           <button
             v-if="node.content || node.children.length > 0"
             class="mr-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 focus:outline-none"
-            @click.stop="emit('update', node.id, { collapsed: !node.collapsed })"
+            @click.stop="
+              emit('update', node.id, { collapsed: !node.collapsed })
+            "
           >
             {{ node.collapsed ? "▶" : "▼" }}
           </button>
@@ -417,7 +419,11 @@ const handleNodeClick = (e: MouseEvent) => {
               v-model="localContent"
               @blur="isEditing = false"
             />
-            <RichEditor v-else v-model="localContent" @blur="isEditing = false" />
+            <RichEditor
+              v-else
+              v-model="localContent"
+              @blur="isEditing = false"
+            />
           </div>
           <!--
             padMode：编辑时保留预览，实现即时渲染（含公式）

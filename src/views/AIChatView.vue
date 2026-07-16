@@ -1055,12 +1055,19 @@ onMounted(() => {
           >
             <span class="text-base flex-shrink-0 mt-0.5">💬</span>
             <div class="flex-1 min-w-0">
-              <div class="truncate font-medium">{{ conv.title || "新对话" }}</div>
+              <div class="truncate font-medium">
+                {{ conv.title || "新对话" }}
+              </div>
               <div
                 v-if="conv.messages.length > 0"
                 class="flex flex-wrap items-center gap-1 mt-1"
               >
-                <template v-for="imgUrl in getImageUrls(conv.messages[conv.messages.length - 1]).slice(0, 3)" :key="imgUrl">
+                <template
+                  v-for="imgUrl in getImageUrls(
+                    conv.messages[conv.messages.length - 1],
+                  ).slice(0, 3)"
+                  :key="imgUrl"
+                >
                   <img
                     :src="imgUrl"
                     class="w-6 h-6 rounded object-cover border border-gray-300 dark:border-slate-600 flex-shrink-0 cursor-pointer"
@@ -1068,8 +1075,14 @@ onMounted(() => {
                     alt="缩略图"
                   />
                 </template>
-                <span class="text-xs text-gray-400 dark:text-slate-500 truncate flex-1">
-                  {{ getMessagePreview(conv.messages[conv.messages.length - 1]).slice(0, 50) }}
+                <span
+                  class="text-xs text-gray-400 dark:text-slate-500 truncate flex-1"
+                >
+                  {{
+                    getMessagePreview(
+                      conv.messages[conv.messages.length - 1],
+                    ).slice(0, 50)
+                  }}
                 </span>
               </div>
             </div>
@@ -1241,7 +1254,9 @@ onMounted(() => {
                           @click.stop="openLightbox(part.image_url?.url || '')"
                           alt="用户上传图片"
                         />
-                        <span v-else-if="part.type === 'text'">{{ part.text }}</span>
+                        <span v-else-if="part.type === 'text'">{{
+                          part.text
+                        }}</span>
                       </template>
                     </template>
                   </div>
